@@ -19,6 +19,7 @@ namespace AlchemyTower.Editor
         private const string FloorsFolder = DataFolder + "/Floors";
         private const string PrefabsFolder = RootFolder + "/Prefabs";
         private const string UiPrefabsFolder = PrefabsFolder + "/UI";
+        private const string UiPrefabBackupsFolder = UiPrefabsFolder + "/Backups";
         private const string ScenesFolder = RootFolder + "/Scenes";
         private const string BackupsFolder = ScenesFolder + "/Backups";
         private const string DefinitionPath = FloorsFolder + "/FirstFloor.asset";
@@ -75,6 +76,126 @@ namespace AlchemyTower.Editor
 
             ConfigurePortraitOrientation();
             CreateResponsiveScene(definition, floorPrefab);
+        }
+
+        [MenuItem("Tools/Alchemy Tower/Upgrade FloorView Prefab (Automation)")]
+        public static void UpgradeFloorViewPrefabForAutomation()
+        {
+            EnsureProjectFolders();
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(FloorPrefabPath);
+            if (prefab == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "FloorView Prefab not found",
+                    $"No Prefab exists at {FloorPrefabPath}. Run Build M1 Scene first; newly created Prefabs already include automation.",
+                    "OK");
+                return;
+            }
+
+            FloorView existingView = prefab.GetComponent<FloorView>();
+            if (existingView == null)
+            {
+                EditorUtility.DisplayDialog("Invalid FloorView Prefab", "FloorView is missing on the Prefab root.", "OK");
+                return;
+            }
+
+            SerializedObject existingSerialized = new SerializedObject(existingView);
+            bool alreadyUpgraded = existingSerialized.FindProperty("automationButton")?.objectReferenceValue != null
+                && existingSerialized.FindProperty("automationButtonText")?.objectReferenceValue != null;
+            if (alreadyUpgraded)
+            {
+                EditorUtility.DisplayDialog("FloorView Prefab", "Automation controls are already configured. Nothing was modified.", "OK");
+                return;
+            }
+
+            bool confirmed = EditorUtility.DisplayDialog(
+                "Upgrade FloorView Prefab",
+                "A backup will be created. The command adds only Automation Control below the existing upgrade control and assigns its FloorView references. Existing artwork is preserved.",
+                "Back up and upgrade",
+                "Cancel");
+            if (!confirmed)
+                return;
+
+            string backupPath = AssetDatabase.GenerateUniqueAssetPath(
+                $"{UiPrefabBackupsFolder}/FloorView_{DateTime.Now:yyyyMMdd_HHmmss}.prefab");
+            if (!AssetDatabase.CopyAsset(FloorPrefabPath, backupPath))
+            {
+                EditorUtility.DisplayDialog("Backup failed", $"Could not create {backupPath}. The Prefab was not modified.", "OK");
+                return;
+            }
+
+            GameObject contents = PrefabUtility.LoadPrefabContents(FloorPrefabPath);
+            bool saved = false;
+            try
+            {
+                FloorView floorView = contents.GetComponent<FloorView>();
+                Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                Transform automationControl = contents.transform.Find("Automation Control");
+                Button automationButton;
+                Text automationLabel;
+
+                if (automationControl == null)
+                {
+                    CreateAutomationControl(contents.transform, font, out automationButton, out automationLabel);
+                }
+                else
+                {
+                    automationButton = automationControl.Find("Automation Hit Area")?.GetComponent<Button>();
+                    automationLabel = automationControl.Find("Automation Label")?.GetComponent<Text>();
+                    if (automationButton == null || automationLabel == null)
+                    {
+                        EditorUtility.DisplayDialog(
+                            "Automation Control is incomplete",
+                            "An existing Automation Control was found, but its hit area or label is missing. The Prefab was not modified.",
+                            "OK");
+                        return;
+                    }
+                }
+
+                LayoutElement rootSize = contents.GetComponent<LayoutElement>();
+                if (rootSize != null)
+                {
+                    rootSize.minHeight = Mathf.Max(rootSize.minHeight, 1160f);
+                    rootSize.preferredHeight = Mathf.Max(rootSize.preferredHeight, 1460f);
+                }
+
+                SerializedObject serialized = new SerializedObject(floorView);
+                SetReference(serialized, "automationButton", automationButton);
+                SetReference(serialized, "automationButtonText", automationLabel);
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+
+                GameObject savedPrefab = PrefabUtility.SaveAsPrefabAsset(contents, FloorPrefabPath, out saved);
+                saved = saved && savedPrefab != null;
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(contents);
+            }
+
+            if (saved)
+                ConfigureFirstFloorAutomationDefinition();
+            AssetDatabase.SaveAssets();
+            EditorUtility.DisplayDialog(
+                saved ? "FloorView Prefab upgraded" : "FloorView Prefab upgrade failed",
+                saved
+                    ? $"Automation Control was added. Backup: {backupPath}. The scene was not rebuilt."
+                    : $"Unity could not save the upgraded Prefab. Backup: {backupPath}.",
+                "OK");
+        }
+
+        private static void ConfigureFirstFloorAutomationDefinition()
+        {
+            FloorDefinitionSO definition = AssetDatabase.LoadAssetAtPath<FloorDefinitionSO>(DefinitionPath);
+            if (definition == null)
+                return;
+
+            SerializedObject serialized = new SerializedObject(definition);
+            serialized.FindProperty("floorNumber").intValue = 1;
+            serialized.FindProperty("unlockCostCoins").intValue = 0;
+            serialized.FindProperty("firstFloorAutomationCostCoins").intValue = 100;
+            serialized.FindProperty("automationUnlockCostMultiplier").intValue = 20;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(definition);
         }
 
         private static bool PrepareAssets(out FloorDefinitionSO definition, out GameObject floorPrefab)
@@ -174,7 +295,8 @@ namespace AlchemyTower.Editor
             string[] internalReferences =
             {
                 "productionButton", "upgradeButton", "floorNameText", "statusText", "levelText",
-                "rewardText", "progressText", "upgradeButtonText", "progressFill"
+                "rewardText", "progressText", "upgradeButtonText", "progressFill",
+                "automationButton", "automationButtonText"
             };
 
             string[] missing = internalReferences
@@ -205,8 +327,8 @@ namespace AlchemyTower.Editor
             rootLayout.childForceExpandHeight = false;
 
             LayoutElement rootSize = root.GetComponent<LayoutElement>();
-            rootSize.minHeight = 1050f;
-            rootSize.preferredHeight = 1320f;
+            rootSize.minHeight = 1160f;
+            rootSize.preferredHeight = 1460f;
             rootSize.flexibleHeight = 1f;
 
             Image roomPanel = CreateImage("Room Panel", root.transform, new Color(0.20f, 0.15f, 0.30f), Image.Type.Sliced);
@@ -270,6 +392,8 @@ namespace AlchemyTower.Editor
             Text upgradeLabel = CreateText("Upgrade Label", upgradeControl.transform, font, 38, TextAnchor.MiddleCenter, Color.white);
             SetStretch(upgradeLabel.rectTransform, 120f, 120f, 12f, 12f);
 
+            CreateAutomationControl(root.transform, font, out Button automationButton, out Text automationLabel);
+
             FloorView floorView = root.GetComponent<FloorView>();
             SerializedObject serialized = new SerializedObject(floorView);
             SetReference(serialized, "productionButton", productionButton);
@@ -281,9 +405,52 @@ namespace AlchemyTower.Editor
             SetReference(serialized, "progressText", progressText);
             SetReference(serialized, "upgradeButtonText", upgradeLabel);
             SetReference(serialized, "progressFill", progressFill);
+            SetReference(serialized, "automationButton", automationButton);
+            SetReference(serialized, "automationButtonText", automationLabel);
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             return root;
+        }
+
+        private static void CreateAutomationControl(
+            Transform parent,
+            Font font,
+            out Button automationButton,
+            out Text automationLabel)
+        {
+            GameObject automationControl = CreateUiObject("Automation Control", parent, typeof(LayoutElement));
+            LayoutElement automationSize = automationControl.GetComponent<LayoutElement>();
+            automationSize.minHeight = 130f;
+            automationSize.preferredHeight = 160f;
+            automationSize.flexibleHeight = 0f;
+
+            Image automationBackground = CreateImage(
+                "Automation Background",
+                automationControl.transform,
+                new Color(0.23f, 0.58f, 0.48f),
+                Image.Type.Sliced);
+            SetStretch(automationBackground.rectTransform, 100f, 100f, 0f, 0f);
+
+            Image automationHitImage = CreateImage(
+                "Automation Hit Area",
+                automationControl.transform,
+                Color.clear,
+                Image.Type.Simple,
+                raycastTarget: true);
+            SetStretch(automationHitImage.rectTransform, 100f, 100f, 0f, 0f);
+            automationButton = automationHitImage.gameObject.AddComponent<Button>();
+            automationButton.targetGraphic = automationHitImage;
+            automationButton.transition = Selectable.Transition.None;
+
+            automationLabel = CreateText(
+                "Automation Label",
+                automationControl.transform,
+                font,
+                36,
+                TextAnchor.MiddleCenter,
+                Color.white);
+            automationLabel.text = "Hire Assistant — 100";
+            SetStretch(automationLabel.rectTransform, 120f, 120f, 12f, 12f);
         }
 
         private static void CreateResponsiveScene(FloorDefinitionSO definition, GameObject floorPrefab)
@@ -536,6 +703,7 @@ namespace AlchemyTower.Editor
             EnsureFolder(DataFolder, "Floors");
             EnsureFolder(RootFolder, "Prefabs");
             EnsureFolder(PrefabsFolder, "UI");
+            EnsureFolder(UiPrefabsFolder, "Backups");
             EnsureFolder(RootFolder, "Scenes");
             EnsureFolder(ScenesFolder, "Backups");
         }

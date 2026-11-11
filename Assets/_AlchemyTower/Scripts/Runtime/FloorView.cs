@@ -12,6 +12,7 @@ namespace AlchemyTower
         [Header("Input")]
         [SerializeField] private Button productionButton;
         [SerializeField] private Button upgradeButton;
+        [SerializeField] private Button automationButton;
 
         [Header("Display")]
         [SerializeField] private Text floorNameText;
@@ -21,6 +22,7 @@ namespace AlchemyTower
         [SerializeField] private Text rewardText;
         [SerializeField] private Text progressText;
         [SerializeField] private Text upgradeButtonText;
+        [SerializeField] private Text automationButtonText;
         [SerializeField] private Image progressFill;
 
         private FloorModel model;
@@ -37,6 +39,7 @@ namespace AlchemyTower
             floorNameText.text = definition.DisplayName;
             productionButton.onClick.AddListener(OnProductionTapped);
             upgradeButton.onClick.AddListener(OnUpgradeClicked);
+            automationButton.onClick.AddListener(OnAutomationClicked);
             Refresh();
         }
 
@@ -52,6 +55,8 @@ namespace AlchemyTower
                 productionButton.onClick.RemoveListener(OnProductionTapped);
             if (upgradeButton != null)
                 upgradeButton.onClick.RemoveListener(OnUpgradeClicked);
+            if (automationButton != null)
+                automationButton.onClick.RemoveListener(OnAutomationClicked);
         }
 
         private void OnProductionTapped()
@@ -66,6 +71,12 @@ namespace AlchemyTower
             Refresh();
         }
 
+        private void OnAutomationClicked()
+        {
+            model.TryBuyAutomation();
+            Refresh();
+        }
+
         private void Refresh()
         {
             coinsText.text = $"Coins: {model.Coins}";
@@ -75,11 +86,18 @@ namespace AlchemyTower
             progressFill.fillAmount = Mathf.Clamp01(model.Progress01);
 
             bool ready = model.Phase == FloorPhase.ReadyToCollect;
-            statusText.text = ready ? "READY - TAP TO COLLECT" : "BREWING - TAP TO SPEED UP";
+            statusText.text = model.IsAutomated
+                ? "AUTOMATED - TAP TO SPEED UP"
+                : ready ? "READY - TAP TO COLLECT" : "BREWING - TAP TO SPEED UP";
             statusText.color = ready ? new Color(0.35f, 1f, 0.55f) : Color.white;
 
             upgradeButtonText.text = $"Upgrade income: {model.CurrentUpgradeCostCoins}";
             upgradeButton.interactable = model.Coins >= model.CurrentUpgradeCostCoins;
+
+            automationButtonText.text = model.IsAutomated
+                ? "Automated"
+                : $"Hire Assistant — {model.AutomationCostCoins}";
+            automationButton.interactable = !model.IsAutomated && model.Coins >= model.AutomationCostCoins;
         }
 
         private bool ValidateReferences()
@@ -88,6 +106,7 @@ namespace AlchemyTower
             AddIfMissing(definition, nameof(definition), missing);
             AddIfMissing(productionButton, nameof(productionButton), missing);
             AddIfMissing(upgradeButton, nameof(upgradeButton), missing);
+            AddIfMissing(automationButton, nameof(automationButton), missing);
             AddIfMissing(floorNameText, nameof(floorNameText), missing);
             AddIfMissing(coinsText, nameof(coinsText), missing);
             AddIfMissing(statusText, nameof(statusText), missing);
@@ -95,6 +114,7 @@ namespace AlchemyTower
             AddIfMissing(rewardText, nameof(rewardText), missing);
             AddIfMissing(progressText, nameof(progressText), missing);
             AddIfMissing(upgradeButtonText, nameof(upgradeButtonText), missing);
+            AddIfMissing(automationButtonText, nameof(automationButtonText), missing);
             AddIfMissing(progressFill, nameof(progressFill), missing);
 
             if (missing.Count == 0)

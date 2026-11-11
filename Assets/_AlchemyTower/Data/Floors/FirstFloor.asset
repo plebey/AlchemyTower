@@ -20,3 +20,7 @@ MonoBehaviour:
   initialUpgradeCostCoins: 30
   rewardGrowth: 1.1
   upgradeCostGrowth: 1.15
+  floorNumber: 1
+  unlockCostCoins: 0
+  firstFloorAutomationCostCoins: 100
+  automationUnlockCostMultiplier: 20

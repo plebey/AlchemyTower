@@ -14,6 +14,11 @@ namespace AlchemyTower
         [SerializeField, Min(1)] private int initialUpgradeCostCoins = 30;
         [SerializeField, Min(1f)] private double rewardGrowth = 1.10d;
         [SerializeField, Min(1f)] private double upgradeCostGrowth = 1.15d;
+        [Header("Floor Economy")]
+        [SerializeField, Min(1)] private int floorNumber = 1;
+        [SerializeField, Min(0)] private int unlockCostCoins;
+        [SerializeField, Min(1)] private int firstFloorAutomationCostCoins = 100;
+        [SerializeField, Min(1)] private int automationUnlockCostMultiplier = 20;
 
         public string DisplayName => displayName;
 
@@ -26,7 +31,21 @@ namespace AlchemyTower
                 baseRewardCoins,
                 initialUpgradeCostCoins,
                 ToDecimal(rewardGrowth, nameof(rewardGrowth)),
-                ToDecimal(upgradeCostGrowth, nameof(upgradeCostGrowth)));
+                ToDecimal(upgradeCostGrowth, nameof(upgradeCostGrowth)),
+                floorNumber,
+                unlockCostCoins,
+                firstFloorAutomationCostCoins,
+                automationUnlockCostMultiplier);
+        }
+
+        private void OnValidate()
+        {
+            floorNumber = Math.Max(1, floorNumber);
+            unlockCostCoins = Math.Max(0, unlockCostCoins);
+            if (firstFloorAutomationCostCoins <= 0)
+                firstFloorAutomationCostCoins = 100;
+            if (automationUnlockCostMultiplier <= 0)
+                automationUnlockCostMultiplier = 20;
         }
 
         private static decimal ToDecimal(double value, string fieldName)

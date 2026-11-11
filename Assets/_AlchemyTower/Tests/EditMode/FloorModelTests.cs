@@ -101,6 +101,137 @@ namespace AlchemyTower.Tests
             Assert.That(model.BrewDurationSeconds, Is.EqualTo(5f));
         }
 
+        [Test]
+        public void AutomationPurchase_DeductsConfiguredPriceAndMarksFloorAutomated()
+        {
+            FloorModel model = CreateModel(initialCoins: 100);
+
+            bool purchased = model.TryBuyAutomation();
+
+            Assert.That(purchased, Is.True);
+            Assert.That(model.IsAutomated, Is.True);
+            Assert.That(model.Coins, Is.Zero);
+            Assert.That(model.AutomationCostCoins, Is.EqualTo(100));
+            Assert.That(model.CurrentRewardCoins, Is.EqualTo(10));
+            Assert.That(model.BrewDurationSeconds, Is.EqualTo(5f));
+        }
+
+        [Test]
+        public void AutomationPurchase_WithInsufficientCoins_DoesNothing()
+        {
+            FloorModel model = CreateModel(initialCoins: 99);
+
+            bool purchased = model.TryBuyAutomation();
+
+            Assert.That(purchased, Is.False);
+            Assert.That(model.IsAutomated, Is.False);
+            Assert.That(model.Coins, Is.EqualTo(99));
+        }
+
+        [Test]
+        public void AutomationPurchase_CannotBePurchasedTwice()
+        {
+            FloorModel model = CreateModel(initialCoins: 200);
+
+            Assert.That(model.TryBuyAutomation(), Is.True);
+            Assert.That(model.TryBuyAutomation(), Is.False);
+            Assert.That(model.Coins, Is.EqualTo(100));
+        }
+
+        [Test]
+        public void AutomationPurchase_WhileReadyPaysPotionOnceAndRestarts()
+        {
+            FloorModel model = CreateModel(initialCoins: 100);
+            model.Tick(5f);
+
+            bool purchased = model.TryBuyAutomation();
+            bool manualDuplicate = model.TryCollect();
+
+            Assert.That(purchased, Is.True);
+            Assert.That(manualDuplicate, Is.False);
+            Assert.That(model.Coins, Is.EqualTo(10));
+            Assert.That(model.Phase, Is.EqualTo(FloorPhase.Brewing));
+            Assert.That(model.ProgressSeconds, Is.Zero);
+        }
+
+        [Test]
+        public void AutomationPurchase_DuringBrewingPreservesProgress()
+        {
+            FloorModel model = CreateModel(initialCoins: 100);
+            model.Tick(2f);
+
+            bool purchased = model.TryBuyAutomation();
+
+            Assert.That(purchased, Is.True);
+            Assert.That(model.Coins, Is.Zero);
+            Assert.That(model.Phase, Is.EqualTo(FloorPhase.Brewing));
+            Assert.That(model.ProgressSeconds, Is.EqualTo(2f));
+        }
+
+        [Test]
+        public void AutomatedTick_PaysExactlyOnceAndRestartsImmediately()
+        {
+            FloorModel model = CreateModel(initialCoins: 100);
+            model.TryBuyAutomation();
+
+            model.Tick(5f);
+
+            Assert.That(model.Coins, Is.EqualTo(10));
+            Assert.That(model.Phase, Is.EqualTo(FloorPhase.Brewing));
+            Assert.That(model.ProgressSeconds, Is.Zero);
+        }
+
+        [Test]
+        public void AutomatedLargeTick_PaysEveryFullCycleAndKeepsRemainder()
+        {
+            FloorModel model = CreateModel(initialCoins: 100);
+            model.TryBuyAutomation();
+
+            model.Tick(12.5f);
+
+            Assert.That(model.Coins, Is.EqualTo(20));
+            Assert.That(model.ProgressSeconds, Is.EqualTo(2.5f).Within(0.0001f));
+
+            model.Tick(2.5f);
+
+            Assert.That(model.Coins, Is.EqualTo(30));
+            Assert.That(model.ProgressSeconds, Is.EqualTo(0f).Within(0.0001f));
+        }
+
+        [Test]
+        public void AutomatedTap_StillAcceleratesAndCanCompleteOneCycle()
+        {
+            FloorModel model = CreateModel(initialCoins: 100);
+            model.TryBuyAutomation();
+            model.Tick(4.8f);
+
+            FloorTapResult result = model.TapFloor();
+
+            Assert.That(result, Is.EqualTo(FloorTapResult.AutomatedCycleCompleted));
+            Assert.That(model.Coins, Is.EqualTo(10));
+            Assert.That(model.Phase, Is.EqualTo(FloorPhase.Brewing));
+            Assert.That(model.ProgressSeconds, Is.EqualTo(0.15f).Within(0.0001f));
+        }
+
+        [Test]
+        public void AutomationCost_ForLaterFloorUsesUnlockCostMultiplier()
+        {
+            FloorRules secondFloorRules = new FloorRules(
+                "second_floor",
+                6f,
+                0.35f,
+                40,
+                120,
+                1.10m,
+                1.15m,
+                floorNumber: 2,
+                unlockCostCoins: 150,
+                firstFloorAutomationCostCoins: 100,
+                automationUnlockCostMultiplier: 20);
+
+            Assert.That(EconomyMath.AutomationCost(secondFloorRules), Is.EqualTo(3000));
+        }
+
         [TestCase("10.49", 10)]
         [TestCase("10.50", 11)]
         [TestCase("34.50", 35)]
