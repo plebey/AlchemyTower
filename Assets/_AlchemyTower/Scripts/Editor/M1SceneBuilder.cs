@@ -12,7 +12,7 @@ using UnityEngine.UI;
 
 namespace AlchemyTower.Editor
 {
-    public static class M1SceneBuilder
+    public static class LegacyM1SceneRepair
     {
         private const string RootFolder = "Assets/_AlchemyTower";
         private const string DataFolder = RootFolder + "/Data";
@@ -22,7 +22,7 @@ namespace AlchemyTower.Editor
         private const string ScenePath = ScenesFolder + "/M1FirstFloor.unity";
         private const string InputActionsPath = "Assets/Settings/InputSystem_Actions.inputactions";
 
-        [MenuItem("Tools/Alchemy Tower/Build M1 Scene")]
+        [MenuItem("Tools/Alchemy Tower/Legacy/Build Placeholder M1 Scene")]
         public static void BuildM1Scene()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -76,7 +76,7 @@ namespace AlchemyTower.Editor
                 "OK");
         }
 
-        [MenuItem("Tools/Alchemy Tower/Repair Existing M1 Scene")]
+        [MenuItem("Tools/Alchemy Tower/Legacy/Repair Placeholder M1 Scene")]
         public static void RepairExistingM1Scene()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
