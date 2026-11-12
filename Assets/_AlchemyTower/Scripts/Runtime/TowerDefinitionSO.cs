@@ -10,6 +10,14 @@ namespace AlchemyTower
 
         public int FloorCount => floors?.Length ?? 0;
 
+        public FloorDefinitionSO GetFloorDefinition(int floorNumber)
+        {
+            if (floors == null || floorNumber < 1 || floorNumber > floors.Length)
+                throw new ArgumentOutOfRangeException(nameof(floorNumber));
+
+            return floors[floorNumber - 1];
+        }
+
         public TowerModel CreateModel(int initialCoins = 0)
         {
             if (floors == null || floors.Length == 0)

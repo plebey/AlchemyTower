@@ -6,9 +6,6 @@ namespace AlchemyTower
 {
     public sealed class FloorView : MonoBehaviour
     {
-        [Header("Configuration")]
-        [SerializeField] private FloorDefinitionSO definition;
-
         [Header("Input")]
         [SerializeField] private Button productionButton;
         [SerializeField] private Button upgradeButton;
@@ -16,7 +13,6 @@ namespace AlchemyTower
 
         [Header("Display")]
         [SerializeField] private Text floorNameText;
-        [SerializeField] private Text coinsText;
         [SerializeField] private Text statusText;
         [SerializeField] private Text levelText;
         [SerializeField] private Text rewardText;
@@ -26,6 +22,7 @@ namespace AlchemyTower
         [SerializeField] private Image progressFill;
 
         private FloorModel model;
+        private bool listenersRegistered;
 
         private void Awake()
         {
@@ -35,51 +32,61 @@ namespace AlchemyTower
                 return;
             }
 
-            model = new FloorModel(definition.CreateRules());
-            floorNameText.text = definition.DisplayName;
             productionButton.onClick.AddListener(OnProductionTapped);
             upgradeButton.onClick.AddListener(OnUpgradeClicked);
             automationButton.onClick.AddListener(OnAutomationClicked);
-            Refresh();
+            listenersRegistered = true;
         }
 
-        private void Update()
+        public void Bind(FloorModel floorModel, string displayName)
         {
-            model.Tick(Time.deltaTime);
+            model = floorModel ?? throw new System.ArgumentNullException(nameof(floorModel));
+            floorNameText.text = displayName;
             Refresh();
         }
 
         private void OnDestroy()
         {
-            if (productionButton != null)
+            if (listenersRegistered && productionButton != null)
                 productionButton.onClick.RemoveListener(OnProductionTapped);
-            if (upgradeButton != null)
+            if (listenersRegistered && upgradeButton != null)
                 upgradeButton.onClick.RemoveListener(OnUpgradeClicked);
-            if (automationButton != null)
+            if (listenersRegistered && automationButton != null)
                 automationButton.onClick.RemoveListener(OnAutomationClicked);
         }
 
         private void OnProductionTapped()
         {
+            if (model == null)
+                return;
+
             model.TapFloor();
             Refresh();
         }
 
         private void OnUpgradeClicked()
         {
+            if (model == null)
+                return;
+
             model.TryUpgrade();
             Refresh();
         }
 
         private void OnAutomationClicked()
         {
+            if (model == null)
+                return;
+
             model.TryBuyAutomation();
             Refresh();
         }
 
-        private void Refresh()
+        public void Refresh()
         {
-            coinsText.text = $"Coins: {model.Coins}";
+            if (model == null)
+                return;
+
             levelText.text = $"Level: {model.Level}";
             rewardText.text = $"Potion reward: {model.CurrentRewardCoins}";
             progressText.text = $"{model.ProgressSeconds:0.00} / {model.BrewDurationSeconds:0.00} s";
@@ -94,23 +101,24 @@ namespace AlchemyTower
             upgradeButtonText.text = $"Upgrade income: {model.CurrentUpgradeCostCoins}";
             upgradeButton.interactable = model.Coins >= model.CurrentUpgradeCostCoins;
 
-            automationButtonText.text = model.IsAutomated
-                ? "Automated"
-                : model.Level < model.AutomationRequiredLevel
+            GameObject automationControl = automationButton.transform.parent.gameObject;
+            automationControl.SetActive(!model.IsAutomated);
+            if (!model.IsAutomated)
+            {
+                automationButtonText.text = model.Level < model.AutomationRequiredLevel
                     ? $"Hire Assistant — Level {model.AutomationRequiredLevel}"
                     : $"Hire Assistant — {model.AutomationCostCoins}";
-            automationButton.interactable = model.CanBuyAutomation;
+                automationButton.interactable = model.CanBuyAutomation;
+            }
         }
 
         private bool ValidateReferences()
         {
             List<string> missing = new List<string>();
-            AddIfMissing(definition, nameof(definition), missing);
             AddIfMissing(productionButton, nameof(productionButton), missing);
             AddIfMissing(upgradeButton, nameof(upgradeButton), missing);
             AddIfMissing(automationButton, nameof(automationButton), missing);
             AddIfMissing(floorNameText, nameof(floorNameText), missing);
-            AddIfMissing(coinsText, nameof(coinsText), missing);
             AddIfMissing(statusText, nameof(statusText), missing);
             AddIfMissing(levelText, nameof(levelText), missing);
             AddIfMissing(rewardText, nameof(rewardText), missing);

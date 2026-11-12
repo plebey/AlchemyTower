@@ -30,52 +30,13 @@ namespace AlchemyTower.Editor
         [MenuItem("Tools/Alchemy Tower/Build M1 Scene")]
         public static void BuildM1Scene()
         {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
-                return;
-
-            if (!PrepareAssets(out FloorDefinitionSO definition, out GameObject floorPrefab))
-                return;
-
-            SceneAsset existingScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
-            if (existingScene != null)
-            {
-                bool openScene = EditorUtility.DisplayDialog(
-                    "M1 scene already exists",
-                    $"{ScenePath} was not overwritten. Use 'Rebuild M1 Scene (Responsive)' for an explicit backup-and-rebuild, or open the current scene unchanged.",
-                    "Open current scene",
-                    "Cancel");
-
-                if (openScene)
-                    EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-                return;
-            }
-
-            ConfigurePortraitOrientation();
-            CreateResponsiveScene(definition, floorPrefab);
+            M2TowerSceneBuilder.BuildScene(rebuildExisting: false);
         }
 
         [MenuItem("Tools/Alchemy Tower/Rebuild M1 Scene (Responsive)")]
         public static void RebuildResponsiveScene()
         {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
-                return;
-
-            bool confirmed = EditorUtility.DisplayDialog(
-                "Rebuild responsive M1 scene",
-                "This explicitly replaces M1FirstFloor.unity after creating a timestamped backup. Existing FloorView.prefab is reused without modification. Android orientation will be set to portrait.",
-                "Back up and rebuild",
-                "Cancel");
-            if (!confirmed)
-                return;
-
-            if (!PrepareAssets(out FloorDefinitionSO definition, out GameObject floorPrefab))
-                return;
-
-            if (!BackUpExistingScene())
-                return;
-
-            ConfigurePortraitOrientation();
-            CreateResponsiveScene(definition, floorPrefab);
+            M2TowerSceneBuilder.BuildScene(rebuildExisting: true);
         }
 
         [MenuItem("Tools/Alchemy Tower/Upgrade FloorView Prefab (Automation)")]
