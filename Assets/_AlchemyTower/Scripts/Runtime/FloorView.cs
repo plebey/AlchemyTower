@@ -96,8 +96,10 @@ namespace AlchemyTower
 
             automationButtonText.text = model.IsAutomated
                 ? "Automated"
-                : $"Hire Assistant — {model.AutomationCostCoins}";
-            automationButton.interactable = !model.IsAutomated && model.Coins >= model.AutomationCostCoins;
+                : model.Level < model.AutomationRequiredLevel
+                    ? $"Hire Assistant — Level {model.AutomationRequiredLevel}"
+                    : $"Hire Assistant — {model.AutomationCostCoins}";
+            automationButton.interactable = model.CanBuyAutomation;
         }
 
         private bool ValidateReferences()

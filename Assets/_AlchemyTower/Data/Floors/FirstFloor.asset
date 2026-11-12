@@ -24,3 +24,4 @@ MonoBehaviour:
   unlockCostCoins: 0
   firstFloorAutomationCostCoins: 100
   automationUnlockCostMultiplier: 20
+  automationRequiredLevel: 5

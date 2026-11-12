@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace AlchemyTower
 {
@@ -13,7 +14,8 @@ namespace AlchemyTower
         Progressed,
         BecameReady,
         Collected,
-        AutomatedCycleCompleted
+        AutomatedCycleCompleted,
+        Locked
     }
 
     public readonly struct FloorRules
@@ -29,7 +31,8 @@ namespace AlchemyTower
             int floorNumber = 1,
             int unlockCostCoins = 0,
             int firstFloorAutomationCostCoins = 100,
-            int automationUnlockCostMultiplier = 20)
+            int automationUnlockCostMultiplier = 20,
+            int automationRequiredLevel = 5)
         {
             if (string.IsNullOrWhiteSpace(floorId))
                 throw new ArgumentException("Floor ID must not be empty.", nameof(floorId));
@@ -55,6 +58,8 @@ namespace AlchemyTower
                 throw new ArgumentOutOfRangeException(nameof(firstFloorAutomationCostCoins));
             if (automationUnlockCostMultiplier <= 0)
                 throw new ArgumentOutOfRangeException(nameof(automationUnlockCostMultiplier));
+            if (automationRequiredLevel < 1)
+                throw new ArgumentOutOfRangeException(nameof(automationRequiredLevel));
 
             FloorId = floorId;
             BrewDurationSeconds = brewDurationSeconds;
@@ -67,6 +72,7 @@ namespace AlchemyTower
             UnlockCostCoins = unlockCostCoins;
             FirstFloorAutomationCostCoins = firstFloorAutomationCostCoins;
             AutomationUnlockCostMultiplier = automationUnlockCostMultiplier;
+            AutomationRequiredLevel = automationRequiredLevel;
         }
 
         public string FloorId { get; }
@@ -80,6 +86,7 @@ namespace AlchemyTower
         public int UnlockCostCoins { get; }
         public int FirstFloorAutomationCostCoins { get; }
         public int AutomationUnlockCostMultiplier { get; }
+        public int AutomationRequiredLevel { get; }
 
         private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }
@@ -146,35 +153,96 @@ namespace AlchemyTower
         }
     }
 
-    public sealed class FloorModel
+    public sealed class CoinWallet
     {
-        private readonly FloorRules rules;
-
-        public FloorModel(FloorRules rules, int initialCoins = 0)
+        public CoinWallet(int initialCoins = 0)
         {
             if (initialCoins < 0)
                 throw new ArgumentOutOfRangeException(nameof(initialCoins));
 
-            this.rules = rules;
             Coins = initialCoins;
+        }
+
+        public int Coins { get; private set; }
+
+        internal bool TrySpend(int amount)
+        {
+            if (amount < 0)
+                throw new ArgumentOutOfRangeException(nameof(amount));
+            if (Coins < amount)
+                return false;
+
+            Coins -= amount;
+            return true;
+        }
+
+        internal void Add(int amount)
+        {
+            if (amount <= 0)
+                return;
+
+            Coins = amount > int.MaxValue - Coins ? int.MaxValue : Coins + amount;
+        }
+
+        internal void AddForCycles(int rewardPerCycle, double completedCycles)
+        {
+            if (Coins == int.MaxValue || rewardPerCycle <= 0 || completedCycles < 1d)
+                return;
+
+            int availableSpace = int.MaxValue - Coins;
+            double cyclesUntilSaturation = Math.Ceiling(availableSpace / (double)rewardPerCycle);
+            if (completedCycles >= cyclesUntilSaturation)
+            {
+                Coins = int.MaxValue;
+                return;
+            }
+
+            Coins += rewardPerCycle * (int)completedCycles;
+        }
+    }
+
+    public sealed class FloorModel
+    {
+        private readonly FloorRules rules;
+        private readonly CoinWallet wallet;
+
+        public FloorModel(FloorRules rules, int initialCoins = 0)
+            : this(rules, new CoinWallet(initialCoins), true)
+        {
+        }
+
+        internal FloorModel(FloorRules rules, CoinWallet wallet, bool isUnlocked)
+        {
+            this.rules = rules;
+            this.wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
+            IsUnlocked = isUnlocked;
             Level = 1;
             Phase = FloorPhase.Brewing;
         }
 
-        public int Coins { get; private set; }
+        public string FloorId => rules.FloorId;
+        public int FloorNumber => rules.FloorNumber;
+        public int UnlockCostCoins => rules.UnlockCostCoins;
+        public bool IsUnlocked { get; private set; }
+        public int Coins => wallet.Coins;
         public int Level { get; private set; }
         public float ProgressSeconds { get; private set; }
         public FloorPhase Phase { get; private set; }
         public bool IsAutomated { get; private set; }
         public float BrewDurationSeconds => rules.BrewDurationSeconds;
-        public float Progress01 => ProgressSeconds / rules.BrewDurationSeconds;
+        public float Progress01 => IsUnlocked ? ProgressSeconds / rules.BrewDurationSeconds : 0f;
         public int CurrentRewardCoins => EconomyMath.RewardForLevel(rules, Level);
         public int CurrentUpgradeCostCoins => EconomyMath.UpgradeCostForLevel(rules, Level);
         public int AutomationCostCoins => EconomyMath.AutomationCost(rules);
+        public int AutomationRequiredLevel => rules.AutomationRequiredLevel;
+        public bool CanBuyAutomation => IsUnlocked
+            && !IsAutomated
+            && Level >= AutomationRequiredLevel
+            && Coins >= AutomationCostCoins;
 
         public void Tick(float deltaSeconds)
         {
-            if (float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds) || deltaSeconds <= 0f)
+            if (!IsUnlocked || float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds) || deltaSeconds <= 0f)
                 return;
             if (IsAutomated)
             {
@@ -189,6 +257,9 @@ namespace AlchemyTower
 
         public FloorTapResult TapFloor()
         {
+            if (!IsUnlocked)
+                return FloorTapResult.Locked;
+
             if (IsAutomated)
             {
                 bool completedCycle = ApplyAutomatedProgress(rules.TapBoostSeconds);
@@ -212,10 +283,10 @@ namespace AlchemyTower
 
         public bool TryCollect()
         {
-            if (IsAutomated || Phase != FloorPhase.ReadyToCollect)
+            if (!IsUnlocked || IsAutomated || Phase != FloorPhase.ReadyToCollect)
                 return false;
 
-            AddCoins(CurrentRewardCoins);
+            wallet.Add(CurrentRewardCoins);
             ProgressSeconds = 0f;
             Phase = FloorPhase.Brewing;
             return true;
@@ -223,19 +294,14 @@ namespace AlchemyTower
 
         public bool TryBuyAutomation()
         {
-            if (IsAutomated)
+            if (!CanBuyAutomation || !wallet.TrySpend(AutomationCostCoins))
                 return false;
 
-            int cost = AutomationCostCoins;
-            if (Coins < cost)
-                return false;
-
-            Coins -= cost;
             IsAutomated = true;
 
             if (Phase == FloorPhase.ReadyToCollect)
             {
-                AddCoins(CurrentRewardCoins);
+                wallet.Add(CurrentRewardCoins);
                 ProgressSeconds = 0f;
                 Phase = FloorPhase.Brewing;
             }
@@ -245,13 +311,18 @@ namespace AlchemyTower
 
         public bool TryUpgrade()
         {
-            int cost = CurrentUpgradeCostCoins;
-            if (Coins < cost)
+            if (!IsUnlocked || !wallet.TrySpend(CurrentUpgradeCostCoins))
                 return false;
 
-            Coins -= cost;
             Level++;
             return true;
+        }
+
+        internal void Unlock()
+        {
+            IsUnlocked = true;
+            ProgressSeconds = 0f;
+            Phase = FloorPhase.Brewing;
         }
 
         private void ApplyProgress(float seconds)
@@ -278,29 +349,80 @@ namespace AlchemyTower
 
             ProgressSeconds = (float)(totalProgress % duration);
             Phase = FloorPhase.Brewing;
-            AddCoinsForCycles(CurrentRewardCoins, completedCycles);
+            wallet.AddForCycles(CurrentRewardCoins, completedCycles);
+            return true;
+        }
+    }
+
+    public sealed class TowerModel
+    {
+        private readonly FloorModel[] floors;
+
+        public TowerModel(IReadOnlyList<FloorRules> floorRules, int initialCoins = 0)
+        {
+            if (floorRules == null)
+                throw new ArgumentNullException(nameof(floorRules));
+            if (floorRules.Count == 0)
+                throw new ArgumentException("At least one floor is required.", nameof(floorRules));
+
+            Wallet = new CoinWallet(initialCoins);
+            floors = new FloorModel[floorRules.Count];
+            for (int i = 0; i < floorRules.Count; i++)
+            {
+                FloorRules rules = floorRules[i];
+                int expectedFloorNumber = i + 1;
+                if (rules.FloorNumber != expectedFloorNumber)
+                {
+                    throw new ArgumentException(
+                        $"Floor rules must be ordered and consecutive. Expected floor {expectedFloorNumber}.",
+                        nameof(floorRules));
+                }
+
+                floors[i] = new FloorModel(rules, Wallet, i == 0);
+            }
+        }
+
+        public CoinWallet Wallet { get; }
+        public int Coins => Wallet.Coins;
+        public IReadOnlyList<FloorModel> Floors => floors;
+
+        public FloorModel GetFloor(int floorNumber)
+        {
+            if (floorNumber < 1 || floorNumber > floors.Length)
+                throw new ArgumentOutOfRangeException(nameof(floorNumber));
+
+            return floors[floorNumber - 1];
+        }
+
+        public bool TryUnlockFloor(int floorNumber)
+        {
+            if (!CanUnlockFloor(floorNumber))
+                return false;
+
+            FloorModel floor = floors[floorNumber - 1];
+            if (!Wallet.TrySpend(floor.UnlockCostCoins))
+                return false;
+
+            floor.Unlock();
             return true;
         }
 
-        private void AddCoins(int amount)
+        public bool CanUnlockFloor(int floorNumber)
         {
-            Coins = amount > int.MaxValue - Coins ? int.MaxValue : Coins + amount;
+            if (floorNumber <= 1 || floorNumber > floors.Length)
+                return false;
+
+            FloorModel floor = floors[floorNumber - 1];
+            FloorModel precedingFloor = floors[floorNumber - 2];
+            return !floor.IsUnlocked
+                && precedingFloor.IsUnlocked
+                && Coins >= floor.UnlockCostCoins;
         }
 
-        private void AddCoinsForCycles(int rewardPerCycle, double completedCycles)
+        public void Tick(float deltaSeconds)
         {
-            if (Coins == int.MaxValue || rewardPerCycle <= 0 || completedCycles < 1d)
-                return;
-
-            int availableSpace = int.MaxValue - Coins;
-            double cyclesUntilSaturation = Math.Ceiling(availableSpace / (double)rewardPerCycle);
-            if (completedCycles >= cyclesUntilSaturation)
-            {
-                Coins = int.MaxValue;
-                return;
-            }
-
-            Coins += rewardPerCycle * (int)completedCycles;
+            for (int i = 0; i < floors.Length; i++)
+                floors[i].Tick(deltaSeconds);
         }
     }
 }

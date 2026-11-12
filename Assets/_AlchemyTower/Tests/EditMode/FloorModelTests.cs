@@ -104,7 +104,7 @@ namespace AlchemyTower.Tests
         [Test]
         public void AutomationPurchase_DeductsConfiguredPriceAndMarksFloorAutomated()
         {
-            FloorModel model = CreateModel(initialCoins: 100);
+            FloorModel model = CreateLevelFiveModel(coinsAtLevelFive: 100);
 
             bool purchased = model.TryBuyAutomation();
 
@@ -112,14 +112,14 @@ namespace AlchemyTower.Tests
             Assert.That(model.IsAutomated, Is.True);
             Assert.That(model.Coins, Is.Zero);
             Assert.That(model.AutomationCostCoins, Is.EqualTo(100));
-            Assert.That(model.CurrentRewardCoins, Is.EqualTo(10));
+            Assert.That(model.CurrentRewardCoins, Is.EqualTo(15));
             Assert.That(model.BrewDurationSeconds, Is.EqualTo(5f));
         }
 
         [Test]
         public void AutomationPurchase_WithInsufficientCoins_DoesNothing()
         {
-            FloorModel model = CreateModel(initialCoins: 99);
+            FloorModel model = CreateLevelFiveModel(coinsAtLevelFive: 99);
 
             bool purchased = model.TryBuyAutomation();
 
@@ -131,7 +131,7 @@ namespace AlchemyTower.Tests
         [Test]
         public void AutomationPurchase_CannotBePurchasedTwice()
         {
-            FloorModel model = CreateModel(initialCoins: 200);
+            FloorModel model = CreateLevelFiveModel(coinsAtLevelFive: 200);
 
             Assert.That(model.TryBuyAutomation(), Is.True);
             Assert.That(model.TryBuyAutomation(), Is.False);
@@ -141,7 +141,7 @@ namespace AlchemyTower.Tests
         [Test]
         public void AutomationPurchase_WhileReadyPaysPotionOnceAndRestarts()
         {
-            FloorModel model = CreateModel(initialCoins: 100);
+            FloorModel model = CreateLevelFiveModel(coinsAtLevelFive: 100);
             model.Tick(5f);
 
             bool purchased = model.TryBuyAutomation();
@@ -149,7 +149,7 @@ namespace AlchemyTower.Tests
 
             Assert.That(purchased, Is.True);
             Assert.That(manualDuplicate, Is.False);
-            Assert.That(model.Coins, Is.EqualTo(10));
+            Assert.That(model.Coins, Is.EqualTo(15));
             Assert.That(model.Phase, Is.EqualTo(FloorPhase.Brewing));
             Assert.That(model.ProgressSeconds, Is.Zero);
         }
@@ -157,7 +157,7 @@ namespace AlchemyTower.Tests
         [Test]
         public void AutomationPurchase_DuringBrewingPreservesProgress()
         {
-            FloorModel model = CreateModel(initialCoins: 100);
+            FloorModel model = CreateLevelFiveModel(coinsAtLevelFive: 100);
             model.Tick(2f);
 
             bool purchased = model.TryBuyAutomation();
@@ -171,12 +171,12 @@ namespace AlchemyTower.Tests
         [Test]
         public void AutomatedTick_PaysExactlyOnceAndRestartsImmediately()
         {
-            FloorModel model = CreateModel(initialCoins: 100);
+            FloorModel model = CreateLevelFiveModel(coinsAtLevelFive: 100);
             model.TryBuyAutomation();
 
             model.Tick(5f);
 
-            Assert.That(model.Coins, Is.EqualTo(10));
+            Assert.That(model.Coins, Is.EqualTo(15));
             Assert.That(model.Phase, Is.EqualTo(FloorPhase.Brewing));
             Assert.That(model.ProgressSeconds, Is.Zero);
         }
@@ -184,31 +184,31 @@ namespace AlchemyTower.Tests
         [Test]
         public void AutomatedLargeTick_PaysEveryFullCycleAndKeepsRemainder()
         {
-            FloorModel model = CreateModel(initialCoins: 100);
+            FloorModel model = CreateLevelFiveModel(coinsAtLevelFive: 100);
             model.TryBuyAutomation();
 
             model.Tick(12.5f);
 
-            Assert.That(model.Coins, Is.EqualTo(20));
+            Assert.That(model.Coins, Is.EqualTo(30));
             Assert.That(model.ProgressSeconds, Is.EqualTo(2.5f).Within(0.0001f));
 
             model.Tick(2.5f);
 
-            Assert.That(model.Coins, Is.EqualTo(30));
+            Assert.That(model.Coins, Is.EqualTo(45));
             Assert.That(model.ProgressSeconds, Is.EqualTo(0f).Within(0.0001f));
         }
 
         [Test]
         public void AutomatedTap_StillAcceleratesAndCanCompleteOneCycle()
         {
-            FloorModel model = CreateModel(initialCoins: 100);
+            FloorModel model = CreateLevelFiveModel(coinsAtLevelFive: 100);
             model.TryBuyAutomation();
             model.Tick(4.8f);
 
             FloorTapResult result = model.TapFloor();
 
             Assert.That(result, Is.EqualTo(FloorTapResult.AutomatedCycleCompleted));
-            Assert.That(model.Coins, Is.EqualTo(10));
+            Assert.That(model.Coins, Is.EqualTo(15));
             Assert.That(model.Phase, Is.EqualTo(FloorPhase.Brewing));
             Assert.That(model.ProgressSeconds, Is.EqualTo(0.15f).Within(0.0001f));
         }
@@ -239,6 +239,15 @@ namespace AlchemyTower.Tests
         {
             decimal value = decimal.Parse(input, System.Globalization.CultureInfo.InvariantCulture);
             Assert.That(EconomyMath.RoundCoins(value), Is.EqualTo(expected));
+        }
+
+        private static FloorModel CreateLevelFiveModel(int coinsAtLevelFive)
+        {
+            FloorModel model = CreateModel(initialCoins: coinsAtLevelFive + 151);
+            while (model.Level < 5)
+                Assert.That(model.TryUpgrade(), Is.True);
+
+            return model;
         }
 
         private static FloorModel CreateModel(int initialCoins = 0)

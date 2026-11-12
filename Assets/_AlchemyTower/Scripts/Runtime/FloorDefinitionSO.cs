@@ -19,6 +19,7 @@ namespace AlchemyTower
         [SerializeField, Min(0)] private int unlockCostCoins;
         [SerializeField, Min(1)] private int firstFloorAutomationCostCoins = 100;
         [SerializeField, Min(1)] private int automationUnlockCostMultiplier = 20;
+        [SerializeField, Min(1)] private int automationRequiredLevel = 5;
 
         public string DisplayName => displayName;
 
@@ -35,7 +36,8 @@ namespace AlchemyTower
                 floorNumber,
                 unlockCostCoins,
                 firstFloorAutomationCostCoins,
-                automationUnlockCostMultiplier);
+                automationUnlockCostMultiplier,
+                automationRequiredLevel);
         }
 
         private void OnValidate()
@@ -46,6 +48,8 @@ namespace AlchemyTower
                 firstFloorAutomationCostCoins = 100;
             if (automationUnlockCostMultiplier <= 0)
                 automationUnlockCostMultiplier = 20;
+            if (automationRequiredLevel <= 0)
+                automationRequiredLevel = 5;
         }
 
         private static decimal ToDecimal(double value, string fieldName)
