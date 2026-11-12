@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta
+      name="viewport"
+      content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=yes, viewport-fit=cover"
+    >
+    <title>{{{ PRODUCT_NAME }}}</title>
+    <style>
+      :root {
+        --viewport-width: 100vw;
+        --viewport-height: 100vh;
+        --viewport-left: 0px;
+        --viewport-top: 0px;
+        color-scheme: dark;
+        background: #141221;
+      }
+
+      @supports (height: 100dvh) {
+        :root {
+          --viewport-width: 100dvw;
+          --viewport-height: 100dvh;
+        }
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #141221;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #unity-container {
+        position: relative;
+        width: min(var(--viewport-width), calc(var(--viewport-height) * 0.5625));
+        height: min(var(--viewport-height), calc(var(--viewport-width) * 1.7777777778));
+        overflow: hidden;
+        background: #141221;
+      }
+
+      #unity-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #141221;
+        touch-action: none;
+      }
+
+      #unity-canvas:focus {
+        outline: none;
+      }
+
+      body.mobile #unity-container {
+        position: fixed;
+        left: var(--viewport-left);
+        top: var(--viewport-top);
+        width: var(--viewport-width);
+        height: var(--viewport-height);
+      }
+    </style>
+  </head>
+  <body>
+    <main id="unity-container">
+      <canvas
+        id="unity-canvas"
+        width="{{{ WIDTH }}}"
+        height="{{{ HEIGHT }}}"
+        tabindex="-1"
+        aria-label="{{{ PRODUCT_NAME }}}"
+      ></canvas>
+    </main>
+
+    <script src="Build/{{{ LOADER_FILENAME }}}"></script>
+    <script>
+      (() => {
+        const root = document.documentElement;
+        const canvas = document.querySelector("#unity-canvas");
+        const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+        const touchMac = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+        const isMobile = mobileUserAgent || touchMac;
+        let resizeFrame = 0;
+
+        if (isMobile) {
+          document.body.classList.add("mobile");
+        }
+
+        const updateViewport = () => {
+          resizeFrame = 0;
+          const viewport = window.visualViewport;
+          const width = viewport ? viewport.width : window.innerWidth;
+          const height = viewport ? viewport.height : window.innerHeight;
+          const left = viewport ? viewport.offsetLeft : 0;
+          const top = viewport ? viewport.offsetTop : 0;
+
+          root.style.setProperty("--viewport-width", `${width}px`);
+          root.style.setProperty("--viewport-height", `${height}px`);
+          root.style.setProperty("--viewport-left", `${left}px`);
+          root.style.setProperty("--viewport-top", `${top}px`);
+        };
+
+        const scheduleViewportUpdate = () => {
+          if (resizeFrame === 0) {
+            resizeFrame = requestAnimationFrame(updateViewport);
+          }
+        };
+
+        updateViewport();
+        window.addEventListener("resize", scheduleViewportUpdate, { passive: true });
+        window.addEventListener("orientationchange", scheduleViewportUpdate, { passive: true });
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener("resize", scheduleViewportUpdate, { passive: true });
+          window.visualViewport.addEventListener("scroll", scheduleViewportUpdate, { passive: true });
+        }
+
+        createUnityInstance(canvas, {
+          arguments: [],
+          dataUrl: "Build/{{{ DATA_FILENAME }}}",
+          frameworkUrl: "Build/{{{ FRAMEWORK_FILENAME }}}",
+          codeUrl: "Build/{{{ CODE_FILENAME }}}",
+          streamingAssetsUrl: "StreamingAssets",
+          companyName: "{{{ COMPANY_NAME }}}",
+          productName: "{{{ PRODUCT_NAME }}}",
+          productVersion: "{{{ PRODUCT_VERSION }}}",
+          // Unity's default matchWebGLToCanvasSize behavior is intentionally retained.
+        }).then(() => {
+          scheduleViewportUpdate();
+        }).catch((message) => {
+          alert(message);
+        });
+      })();
+    </script>
+  </body>
+</html>
