@@ -23,6 +23,7 @@ namespace AlchemyTower
 
         private FloorModel model;
         private bool listenersRegistered;
+        private System.Func<bool> canProcessInput;
 
         private void Awake()
         {
@@ -38,9 +39,10 @@ namespace AlchemyTower
             listenersRegistered = true;
         }
 
-        public void Bind(FloorModel floorModel, string displayName)
+        public void Bind(FloorModel floorModel, string displayName, System.Func<bool> inputGuard = null)
         {
             model = floorModel ?? throw new System.ArgumentNullException(nameof(floorModel));
+            canProcessInput = inputGuard;
             floorNameText.text = displayName;
             Refresh();
         }
@@ -57,7 +59,7 @@ namespace AlchemyTower
 
         private void OnProductionTapped()
         {
-            if (model == null)
+            if (model == null || !CanProcessInput())
                 return;
 
             model.TapFloor();
@@ -66,7 +68,7 @@ namespace AlchemyTower
 
         private void OnUpgradeClicked()
         {
-            if (model == null)
+            if (model == null || !CanProcessInput())
                 return;
 
             model.TryUpgrade();
@@ -75,7 +77,7 @@ namespace AlchemyTower
 
         private void OnAutomationClicked()
         {
-            if (model == null)
+            if (model == null || !CanProcessInput())
                 return;
 
             model.TryBuyAutomation();
@@ -138,6 +140,11 @@ namespace AlchemyTower
         {
             if (reference == null)
                 missing.Add(fieldName);
+        }
+
+        private bool CanProcessInput()
+        {
+            return canProcessInput == null || canProcessInput();
         }
     }
 }

@@ -15,6 +15,7 @@ namespace AlchemyTower
         [Header("Scene References")]
         [SerializeField] private RectTransform floorContainer;
         [SerializeField] private Text coinsText;
+        [SerializeField] private TowerScrollNavigator scrollNavigator;
 
         private readonly List<FloorView> activeFloorViews = new List<FloorView>();
         private TowerModel model;
@@ -32,6 +33,7 @@ namespace AlchemyTower
             }
 
             model = towerDefinition.CreateModel();
+            InitializeScrollNavigator();
             RebuildFloorViews();
             RefreshViews();
         }
@@ -44,14 +46,16 @@ namespace AlchemyTower
 
         private void TryUnlockPreviewFloor()
         {
-            if (previewFloorNumber == 0 || !model.TryUnlockFloor(previewFloorNumber))
+            int unlockedFloorNumber = previewFloorNumber;
+            if (unlockedFloorNumber == 0 || !model.TryUnlockFloor(unlockedFloorNumber))
                 return;
 
-            RebuildFloorViews();
+            RectTransform unlockedFloor = RebuildFloorViews(unlockedFloorNumber);
             RefreshViews();
+            scrollNavigator.FocusOn(unlockedFloor);
         }
 
-        private void RebuildFloorViews()
+        private RectTransform RebuildFloorViews(int focusFloorNumber = 0)
         {
             for (int i = floorContainer.childCount - 1; i >= 0; i--)
             {
@@ -62,6 +66,7 @@ namespace AlchemyTower
 
             activeFloorViews.Clear();
             lockedFloorView = null;
+            RectTransform focusedFloor = null;
 
             int highestUnlockedFloor = 0;
             for (int floorNumber = 1; floorNumber <= model.Floors.Count; floorNumber++)
@@ -83,7 +88,8 @@ namespace AlchemyTower
                 lockedFloorView.Bind(
                     previewModel.UnlockCostCoins,
                     TryUnlockPreviewFloor,
-                    model.CanUnlockFloor(previewFloorNumber));
+                    model.CanUnlockFloor(previewFloorNumber),
+                    CanProcessFloorInput);
             }
 
             for (int floorNumber = highestUnlockedFloor; floorNumber >= 1; floorNumber--)
@@ -92,9 +98,14 @@ namespace AlchemyTower
                 floorView.name = $"Floor {floorNumber} — Active";
                 floorView.Bind(
                     model.GetFloor(floorNumber),
-                    towerDefinition.GetFloorDefinition(floorNumber).DisplayName);
+                    towerDefinition.GetFloorDefinition(floorNumber).DisplayName,
+                    CanProcessFloorInput);
                 activeFloorViews.Add(floorView);
+                if (floorNumber == focusFloorNumber)
+                    focusedFloor = floorView.transform as RectTransform;
             }
+
+            return focusedFloor;
         }
 
         private void RefreshViews()
@@ -117,6 +128,25 @@ namespace AlchemyTower
             if (!valid)
                 Debug.LogError("TowerController is missing required references.", this);
             return valid;
+        }
+
+        private void InitializeScrollNavigator()
+        {
+            ScrollRect scrollRect = floorContainer.GetComponentInParent<ScrollRect>();
+            if (scrollNavigator == null && scrollRect != null)
+                scrollNavigator = scrollRect.GetComponent<TowerScrollNavigator>();
+            if (scrollNavigator == null && scrollRect != null)
+                scrollNavigator = scrollRect.gameObject.AddComponent<TowerScrollNavigator>();
+
+            if (scrollNavigator == null || scrollRect == null)
+                throw new InvalidOperationException("TowerController requires a parent ScrollRect.");
+
+            scrollNavigator.Initialize(scrollRect);
+        }
+
+        private bool CanProcessFloorInput()
+        {
+            return scrollNavigator == null || scrollNavigator.CanProcessClick;
         }
     }
 }

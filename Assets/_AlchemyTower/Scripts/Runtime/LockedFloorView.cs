@@ -10,6 +10,7 @@ namespace AlchemyTower
         [SerializeField] private Text unlockPriceText;
 
         private Action unlockAction;
+        private Func<bool> canProcessInput;
 
         private void Awake()
         {
@@ -23,9 +24,10 @@ namespace AlchemyTower
             unlockButton.onClick.AddListener(OnUnlockClicked);
         }
 
-        public void Bind(int unlockPriceCoins, Action onUnlock, bool canAfford)
+        public void Bind(int unlockPriceCoins, Action onUnlock, bool canAfford, Func<bool> inputGuard = null)
         {
             unlockAction = onUnlock ?? throw new ArgumentNullException(nameof(onUnlock));
+            canProcessInput = inputGuard;
             unlockPriceText.text = $"{unlockPriceCoins} coins";
             unlockButton.interactable = canAfford;
         }
@@ -44,7 +46,8 @@ namespace AlchemyTower
 
         private void OnUnlockClicked()
         {
-            unlockAction?.Invoke();
+            if (canProcessInput == null || canProcessInput())
+                unlockAction?.Invoke();
         }
     }
 }

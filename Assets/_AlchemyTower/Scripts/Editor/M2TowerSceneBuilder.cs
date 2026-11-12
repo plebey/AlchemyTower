@@ -279,6 +279,7 @@ namespace AlchemyTower.Editor
             Mask mask = viewportImage.gameObject.AddComponent<Mask>();
             mask.showMaskGraphic = false;
             ScrollRect scrollRect = viewportImage.gameObject.AddComponent<ScrollRect>();
+            TowerScrollNavigator scrollNavigator = viewportImage.gameObject.AddComponent<TowerScrollNavigator>();
 
             GameObject content = CreateUiObject("Continuous Tower", viewportImage.transform, typeof(CanvasRenderer), typeof(Image), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
             RectTransform contentRect = content.GetComponent<RectTransform>();
@@ -306,6 +307,7 @@ namespace AlchemyTower.Editor
             scrollRect.vertical = true;
             scrollRect.movementType = ScrollRect.MovementType.Clamped;
             scrollRect.inertia = true;
+            scrollRect.decelerationRate = 0.135f;
             scrollRect.scrollSensitivity = 45f;
             scrollRect.verticalNormalizedPosition = 0f;
 
@@ -316,6 +318,7 @@ namespace AlchemyTower.Editor
             SetReference(controllerSerialized, "lockedFloorViewPrefab", lockedPrefab);
             SetReference(controllerSerialized, "floorContainer", contentRect);
             SetReference(controllerSerialized, "coinsText", coins);
+            SetReference(controllerSerialized, "scrollNavigator", scrollNavigator);
             controllerSerialized.ApplyModifiedPropertiesWithoutUndo();
 
             CreateEventSystem();

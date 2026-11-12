@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40304962aa42ac14d8f7625af8072edb, type: 3}
+  m_Name: ThirdFloor
+  m_EditorClassIdentifier: AlchemyTower.Runtime::AlchemyTower.FloorDefinitionSO
+  floorId: first_floor
+  displayName: First Floor
+  brewDurationSeconds: 5
+  tapBoostSeconds: 0.35
+  baseRewardCoins: 10
+  initialUpgradeCostCoins: 30
+  rewardGrowth: 1.1
+  upgradeCostGrowth: 1.15
+  floorNumber: 1
+  unlockCostCoins: 0
+  firstFloorAutomationCostCoins: 100
+  automationUnlockCostMultiplier: 20
+  automationRequiredLevel: 5
