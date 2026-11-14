@@ -255,8 +255,8 @@ namespace AlchemyTower.Editor
             SerializedObject serialized = new SerializedObject(floorView);
             string[] internalReferences =
             {
-                "productionButton", "upgradeButton", "floorNameText", "statusText", "levelText",
-                "rewardText", "progressText", "upgradeButtonText", "progressFill",
+                "productionButton", "upgradeButton", "floorNameText", "productNameText", "levelText",
+                "incomePerSecondText", "remainingTimeText", "upgradeButtonText", "progressFill",
                 "automationButton", "automationButtonText"
             };
 
@@ -360,10 +360,10 @@ namespace AlchemyTower.Editor
             SetReference(serialized, "productionButton", productionButton);
             SetReference(serialized, "upgradeButton", upgradeButton);
             SetReference(serialized, "floorNameText", floorName);
-            SetReference(serialized, "statusText", status);
+            SetReference(serialized, "productNameText", status);
             SetReference(serialized, "levelText", level);
-            SetReference(serialized, "rewardText", reward);
-            SetReference(serialized, "progressText", progressText);
+            SetReference(serialized, "incomePerSecondText", reward);
+            SetReference(serialized, "remainingTimeText", progressText);
             SetReference(serialized, "upgradeButtonText", upgradeLabel);
             SetReference(serialized, "progressFill", progressFill);
             SetReference(serialized, "automationButton", automationButton);

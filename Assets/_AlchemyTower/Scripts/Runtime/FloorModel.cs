@@ -248,6 +248,9 @@ namespace AlchemyTower
         public float BrewDurationSeconds => rules.BrewDurationSeconds;
         public float Progress01 => IsUnlocked ? ProgressSeconds / rules.BrewDurationSeconds : 0f;
         public int CurrentRewardCoins => EconomyMath.RewardForLevel(rules, Level);
+        public float NominalIncomePerSecond => rules.BrewDurationSeconds > 0f
+            ? CurrentRewardCoins / rules.BrewDurationSeconds
+            : 0f;
         public int CurrentUpgradeCostCoins => EconomyMath.UpgradeCostForLevel(rules, Level);
         public int AutomationCostCoins => EconomyMath.AutomationCost(rules);
         public int AutomationRequiredLevel => rules.AutomationRequiredLevel;

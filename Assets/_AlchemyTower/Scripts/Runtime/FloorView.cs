@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace AlchemyTower
@@ -13,17 +14,19 @@ namespace AlchemyTower
 
         [Header("Display")]
         [SerializeField] private Text floorNameText;
-        [SerializeField] private Text statusText;
+        [FormerlySerializedAs("statusText")]
+        [SerializeField] private Text productNameText;
         [SerializeField] private Text levelText;
-        [SerializeField] private Text rewardText;
-        [SerializeField] private Text progressText;
+        [FormerlySerializedAs("rewardText")]
+        [SerializeField] private Text incomePerSecondText;
+        [FormerlySerializedAs("progressText")]
+        [SerializeField] private Text remainingTimeText;
         [SerializeField] private Text upgradeButtonText;
         [SerializeField] private Text automationButtonText;
         [SerializeField] private Image progressFill;
 
-        [Header("Status Colors")]
-        [SerializeField] private Color brewingStatusColor = Color.white;
-        [SerializeField] private Color readyStatusColor = new Color(0.35f, 1f, 0.55f);
+        [Header("Authored Content")]
+        [SerializeField] private string productDisplayName = "Potion";
 
         private FloorModel model;
         private bool listenersRegistered;
@@ -48,6 +51,7 @@ namespace AlchemyTower
             model = floorModel ?? throw new System.ArgumentNullException(nameof(floorModel));
             canProcessInput = inputGuard;
             floorNameText.text = displayName;
+            productNameText.text = productDisplayName;
             Refresh();
         }
 
@@ -93,18 +97,19 @@ namespace AlchemyTower
             if (model == null)
                 return;
 
-            levelText.text = $"Level: {model.Level}";
-            rewardText.text = $"Potion reward: {model.CurrentRewardCoins}";
-            progressText.text = $"{model.ProgressSeconds:0.00} / {model.BrewDurationSeconds:0.00} s";
-            progressFill.fillAmount = Mathf.Clamp01(model.Progress01);
+            levelText.text = $"Ур. {model.Level}";
+            incomePerSecondText.text = $"+{model.NominalIncomePerSecond:0.##}/сек";
+            float progress01 = Mathf.Clamp01(model.Progress01);
+            RectTransform progressFillRect = progressFill.rectTransform;
+            Vector2 fillAnchorMax = progressFillRect.anchorMax;
+            fillAnchorMax.x = progress01;
+            progressFillRect.anchorMax = fillAnchorMax;
 
             bool ready = model.Phase == FloorPhase.ReadyToCollect;
-            statusText.text = model.IsAutomated
-                ? "AUTOMATED - TAP TO SPEED UP"
-                : ready ? "READY - TAP TO COLLECT" : "BREWING - TAP TO SPEED UP";
-            statusText.color = ready ? readyStatusColor : brewingStatusColor;
+            float remainingSeconds = Mathf.Max(0f, model.BrewDurationSeconds - model.ProgressSeconds);
+            remainingTimeText.text = ready ? "Готово!" : $"{remainingSeconds:0.0}с";
 
-            upgradeButtonText.text = $"Upgrade income: {model.CurrentUpgradeCostCoins}";
+            upgradeButtonText.text = $"Улучшить\n{model.CurrentUpgradeCostCoins}";
             upgradeButton.interactable = model.Coins >= model.CurrentUpgradeCostCoins;
 
             GameObject automationControl = automationButton.transform.parent.gameObject;
@@ -112,8 +117,8 @@ namespace AlchemyTower
             if (!model.IsAutomated)
             {
                 automationButtonText.text = model.Level < model.AutomationRequiredLevel
-                    ? $"Hire Assistant — Level {model.AutomationRequiredLevel}"
-                    : $"Hire Assistant — {model.AutomationCostCoins}";
+                    ? $"Доступно с ур. {model.AutomationRequiredLevel}"
+                    : $"Нанять автоматизатора\n{model.AutomationCostCoins}  +";
                 automationButton.interactable = model.CanBuyAutomation;
             }
         }
@@ -125,10 +130,10 @@ namespace AlchemyTower
             AddIfMissing(upgradeButton, nameof(upgradeButton), missing);
             AddIfMissing(automationButton, nameof(automationButton), missing);
             AddIfMissing(floorNameText, nameof(floorNameText), missing);
-            AddIfMissing(statusText, nameof(statusText), missing);
+            AddIfMissing(productNameText, nameof(productNameText), missing);
             AddIfMissing(levelText, nameof(levelText), missing);
-            AddIfMissing(rewardText, nameof(rewardText), missing);
-            AddIfMissing(progressText, nameof(progressText), missing);
+            AddIfMissing(incomePerSecondText, nameof(incomePerSecondText), missing);
+            AddIfMissing(remainingTimeText, nameof(remainingTimeText), missing);
             AddIfMissing(upgradeButtonText, nameof(upgradeButtonText), missing);
             AddIfMissing(automationButtonText, nameof(automationButtonText), missing);
             AddIfMissing(progressFill, nameof(progressFill), missing);

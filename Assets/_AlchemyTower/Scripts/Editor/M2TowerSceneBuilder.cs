@@ -53,6 +53,15 @@ namespace AlchemyTower.Editor
                 return;
             }
 
+            if (prefab.transform.Find("Room Panel/Left Info Zone") != null)
+            {
+                EditorUtility.DisplayDialog(
+                    "FloorView Prefab",
+                    "The authored two-zone card layout is already present. Nothing was modified.",
+                    "OK");
+                return;
+            }
+
             if (IsTowerLayout(prefab))
             {
                 EditorUtility.DisplayDialog("FloorView Prefab", "Tower layout is already applied. Nothing was modified.", "OK");

@@ -102,6 +102,16 @@ namespace AlchemyTower.Tests
         }
 
         [Test]
+        public void NominalIncomePerSecond_UsesCurrentRewardAndBaseDuration()
+        {
+            FloorModel model = CreateModel(initialCoins: 30);
+
+            Assert.That(model.NominalIncomePerSecond, Is.EqualTo(2f));
+            Assert.That(model.TryUpgrade(), Is.True);
+            Assert.That(model.NominalIncomePerSecond, Is.EqualTo(2.2f).Within(0.0001f));
+        }
+
+        [Test]
         public void AutomationPurchase_DeductsConfiguredPriceAndMarksFloorAutomated()
         {
             FloorModel model = CreateLevelFiveModel(coinsAtLevelFive: 100);

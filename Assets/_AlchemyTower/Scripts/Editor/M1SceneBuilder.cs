@@ -395,10 +395,10 @@ namespace AlchemyTower.Editor
             serialized.FindProperty("upgradeButton").objectReferenceValue = upgradeButton;
             serialized.FindProperty("floorNameText").objectReferenceValue = floorName;
             serialized.FindProperty("coinsText").objectReferenceValue = coins;
-            serialized.FindProperty("statusText").objectReferenceValue = status;
+            serialized.FindProperty("productNameText").objectReferenceValue = status;
             serialized.FindProperty("levelText").objectReferenceValue = level;
-            serialized.FindProperty("rewardText").objectReferenceValue = reward;
-            serialized.FindProperty("progressText").objectReferenceValue = progress;
+            serialized.FindProperty("incomePerSecondText").objectReferenceValue = reward;
+            serialized.FindProperty("remainingTimeText").objectReferenceValue = progress;
             serialized.FindProperty("upgradeButtonText").objectReferenceValue = upgradeText;
             serialized.FindProperty("progressFill").objectReferenceValue = progressFill;
             serialized.ApplyModifiedPropertiesWithoutUndo();
