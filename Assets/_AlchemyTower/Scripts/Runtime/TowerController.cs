@@ -7,10 +7,21 @@ namespace AlchemyTower
 {
     public sealed class TowerController : MonoBehaviour
     {
+        [Serializable]
+        private sealed class FloorPrefabEntry
+        {
+            [SerializeField] private string floorId;
+            [SerializeField] private FloorView prefab;
+
+            public string FloorId => floorId;
+            public FloorView Prefab => prefab;
+        }
+
         [Header("Configuration")]
         [SerializeField] private TowerDefinitionSO towerDefinition;
         [SerializeField] private FloorView floorViewPrefab;
         [SerializeField] private LockedFloorView lockedFloorViewPrefab;
+        [SerializeField] private FloorPrefabEntry[] floorPrefabsById = Array.Empty<FloorPrefabEntry>();
 
         [Header("Scene References")]
         [SerializeField] private RectTransform floorContainer;
@@ -18,6 +29,7 @@ namespace AlchemyTower
         [SerializeField] private TowerScrollNavigator scrollNavigator;
 
         private readonly List<FloorView> activeFloorViews = new List<FloorView>();
+        private readonly List<GameObject> spawnedFloorObjects = new List<GameObject>();
         private TowerModel model;
         private SaveService saveService;
         private LockedFloorView lockedFloorView;
@@ -88,13 +100,17 @@ namespace AlchemyTower
 
         private RectTransform RebuildFloorViews(int focusFloorNumber = 0)
         {
-            for (int i = floorContainer.childCount - 1; i >= 0; i--)
+            for (int i = 0; i < spawnedFloorObjects.Count; i++)
             {
-                GameObject oldView = floorContainer.GetChild(i).gameObject;
+                GameObject oldView = spawnedFloorObjects[i];
+                if (oldView == null)
+                    continue;
+
                 oldView.SetActive(false);
                 Destroy(oldView);
             }
 
+            spawnedFloorObjects.Clear();
             activeFloorViews.Clear();
             lockedFloorView = null;
             RectTransform focusedFloor = null;
@@ -115,6 +131,7 @@ namespace AlchemyTower
             {
                 FloorModel previewModel = model.GetFloor(previewFloorNumber);
                 lockedFloorView = Instantiate(lockedFloorViewPrefab, floorContainer);
+                spawnedFloorObjects.Add(lockedFloorView.gameObject);
                 lockedFloorView.name = $"Floor {previewFloorNumber} — Locked";
                 lockedFloorView.Bind(
                     previewModel.UnlockCostCoins,
@@ -125,11 +142,13 @@ namespace AlchemyTower
 
             for (int floorNumber = highestUnlockedFloor; floorNumber >= 1; floorNumber--)
             {
-                FloorView floorView = Instantiate(floorViewPrefab, floorContainer);
+                FloorDefinitionSO floorDefinition = towerDefinition.GetFloorDefinition(floorNumber);
+                FloorView floorView = Instantiate(GetFloorViewPrefab(floorDefinition.FloorId), floorContainer);
+                spawnedFloorObjects.Add(floorView.gameObject);
                 floorView.name = $"Floor {floorNumber} — Active";
                 floorView.Bind(
                     model.GetFloor(floorNumber),
-                    towerDefinition.GetFloorDefinition(floorNumber).DisplayName,
+                    floorDefinition.DisplayName,
                     CanProcessFloorInput);
                 activeFloorViews.Add(floorView);
                 if (floorNumber == focusFloorNumber)
@@ -137,6 +156,25 @@ namespace AlchemyTower
             }
 
             return focusedFloor;
+        }
+
+        private FloorView GetFloorViewPrefab(string floorId)
+        {
+            if (floorPrefabsById != null)
+            {
+                for (int i = 0; i < floorPrefabsById.Length; i++)
+                {
+                    FloorPrefabEntry entry = floorPrefabsById[i];
+                    if (entry != null
+                        && entry.Prefab != null
+                        && string.Equals(entry.FloorId, floorId, StringComparison.Ordinal))
+                    {
+                        return entry.Prefab;
+                    }
+                }
+            }
+
+            return floorViewPrefab;
         }
 
         private void RefreshViews()

@@ -728,7 +728,7 @@ GameObject:
   - component: {fileID: 5352448515301820189}
   - component: {fileID: 3168821923447186578}
   m_Layer: 5
-  m_Name: Room Artwork Slot
+  m_Name: RoomArtwork
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -774,7 +774,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.13, g: 0.1, b: 0.2, a: 1}
+  m_Color: {r: 0.18990365, g: 0, b: 0.5377358, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1345,6 +1345,8 @@ MonoBehaviour:
   upgradeButtonText: {fileID: 9183547427172805942}
   automationButtonText: {fileID: 7756079935612582458}
   progressFill: {fileID: 6529109175383882993}
+  brewingStatusColor: {r: 1, g: 1, b: 1, a: 1}
+  readyStatusColor: {r: 0.35, g: 1, b: 0.55, a: 1}
 --- !u!1 &6539786825721177532
 GameObject:
   m_ObjectHideFlags: 0

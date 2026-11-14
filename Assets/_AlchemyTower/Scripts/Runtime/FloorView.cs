@@ -21,6 +21,10 @@ namespace AlchemyTower
         [SerializeField] private Text automationButtonText;
         [SerializeField] private Image progressFill;
 
+        [Header("Status Colors")]
+        [SerializeField] private Color brewingStatusColor = Color.white;
+        [SerializeField] private Color readyStatusColor = new Color(0.35f, 1f, 0.55f);
+
         private FloorModel model;
         private bool listenersRegistered;
         private System.Func<bool> canProcessInput;
@@ -98,7 +102,7 @@ namespace AlchemyTower
             statusText.text = model.IsAutomated
                 ? "AUTOMATED - TAP TO SPEED UP"
                 : ready ? "READY - TAP TO COLLECT" : "BREWING - TAP TO SPEED UP";
-            statusText.color = ready ? new Color(0.35f, 1f, 0.55f) : Color.white;
+            statusText.color = ready ? readyStatusColor : brewingStatusColor;
 
             upgradeButtonText.text = $"Upgrade income: {model.CurrentUpgradeCostCoins}";
             upgradeButton.interactable = model.Coins >= model.CurrentUpgradeCostCoins;

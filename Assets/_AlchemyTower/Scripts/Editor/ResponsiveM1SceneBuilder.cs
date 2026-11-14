@@ -298,7 +298,7 @@ namespace AlchemyTower.Editor
             roomSize.preferredHeight = 1080f;
             roomSize.flexibleHeight = 1f;
 
-            Image roomArtwork = CreateImage("Room Artwork Slot", roomPanel.transform, new Color(0.13f, 0.10f, 0.20f), Image.Type.Simple);
+            Image roomArtwork = CreateImage("RoomArtwork", roomPanel.transform, new Color(0.13f, 0.10f, 0.20f), Image.Type.Simple);
             SetStretch(roomArtwork.rectTransform, 26f, 26f, 26f, 26f);
 
             Text floorName = CreateText("Floor Name", roomPanel.transform, font, 50, TextAnchor.MiddleCenter, Color.white);

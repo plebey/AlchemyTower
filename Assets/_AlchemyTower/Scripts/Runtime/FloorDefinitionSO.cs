@@ -21,6 +21,7 @@ namespace AlchemyTower
         [SerializeField, Min(1)] private int automationUnlockCostMultiplier = 20;
         [SerializeField, Min(1)] private int automationRequiredLevel = 5;
 
+        public string FloorId => floorId;
         public string DisplayName => displayName;
 
         public FloorRules CreateRules()

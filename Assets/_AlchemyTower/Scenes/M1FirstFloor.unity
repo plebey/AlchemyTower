@@ -427,6 +427,13 @@ MonoBehaviour:
   towerDefinition: {fileID: 11400000, guid: 5c2d8c3050ca49f6bf11793cd8f2c012, type: 2}
   floorViewPrefab: {fileID: 4194428734937529969, guid: dc6ca50a5182bea4593bffcf2aba9f5d, type: 3}
   lockedFloorViewPrefab: {fileID: 6511050301486424782, guid: 5e224f60ad6353643abb943fc00a87c1, type: 3}
+  floorPrefabsById:
+  - floorId: first_floor
+    prefab: {fileID: 4194428734937529969, guid: 1c1b0e9e52aa4d18a0b2000000000001, type: 3}
+  - floorId: second_floor
+    prefab: {fileID: 4194428734937529969, guid: 1c1b0e9e52aa4d18a0b2000000000002, type: 3}
+  - floorId: third_floor
+    prefab: {fileID: 4194428734937529969, guid: 1c1b0e9e52aa4d18a0b2000000000003, type: 3}
   floorContainer: {fileID: 1247710799}
   coinsText: {fileID: 1760480073}
   scrollNavigator: {fileID: 0}

@@ -16,6 +16,13 @@ namespace AlchemyTower.Editor
     {
         private const string RootFolder = "Assets/_AlchemyTower";
         private const string FloorPrefabPath = RootFolder + "/Prefabs/UI/FloorView.prefab";
+        private static readonly string[] FloorPrefabIds = { "first_floor", "second_floor", "third_floor" };
+        private static readonly string[] FloorVariantPaths =
+        {
+            RootFolder + "/Prefabs/UI/Floor01.prefab",
+            RootFolder + "/Prefabs/UI/Floor02.prefab",
+            RootFolder + "/Prefabs/UI/Floor03.prefab"
+        };
         private const string LockedPrefabPath = RootFolder + "/Prefabs/UI/LockedFloorView.prefab";
         private const string PrefabBackupsFolder = RootFolder + "/Prefabs/UI/Backups";
         private const string TowerDefinitionPath = RootFolder + "/Data/TowerDefinition.asset";
@@ -94,28 +101,17 @@ namespace AlchemyTower.Editor
                 return;
 
             SceneAsset existingScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
-            if (existingScene != null && !rebuildExisting)
+            if (existingScene != null)
             {
                 bool open = EditorUtility.DisplayDialog(
-                    "Tower scene already exists",
-                    $"{ScenePath} was not overwritten. Use Rebuild M1 Scene (Responsive) for an explicit backup-and-rebuild.",
+                    rebuildExisting ? "Tower scene preserved" : "Tower scene already exists",
+                    $"{ScenePath} contains editable scene artwork and was not overwritten. "
+                    + "The command can only create a missing scene. Open the current scene to validate or edit it.",
                     "Open current scene",
                     "Cancel");
                 if (open)
                     EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
                 return;
-            }
-
-            if (existingScene != null && rebuildExisting)
-            {
-                if (!EditorUtility.DisplayDialog(
-                        "Rebuild vertical tower scene",
-                        "The current scene will be backed up and replaced. FloorView.prefab will not be modified by this command.",
-                        "Back up and rebuild",
-                        "Cancel"))
-                    return;
-                if (!BackUpScene())
-                    return;
             }
 
             TowerDefinitionSO towerDefinition = AssetDatabase.LoadAssetAtPath<TowerDefinitionSO>(TowerDefinitionPath);
@@ -160,7 +156,7 @@ namespace AlchemyTower.Editor
             if (roomSize != null)
                 UnityEngine.Object.DestroyImmediate(roomSize);
 
-            SetStretch(RequireRect(room, "Room Artwork Slot"), 12f, 12f, 12f, 12f);
+            SetStretch(RequireRect(room, "RoomArtwork"), 12f, 12f, 12f, 12f);
             SetAnchors(RequireRect(room, "Floor Name"), 0.04f, 0.80f, 0.67f, 0.96f);
             SetAnchors(RequireRect(room, "Brewing Status"), 0.04f, 0.63f, 0.67f, 0.80f);
             SetAnchors(RequireRect(room, "Floor Level"), 0.06f, 0.47f, 0.34f, 0.61f);
@@ -316,6 +312,7 @@ namespace AlchemyTower.Editor
             SetReference(controllerSerialized, "towerDefinition", towerDefinition);
             SetReference(controllerSerialized, "floorViewPrefab", floorPrefab);
             SetReference(controllerSerialized, "lockedFloorViewPrefab", lockedPrefab);
+            SetFloorPrefabCatalog(controllerSerialized);
             SetReference(controllerSerialized, "floorContainer", contentRect);
             SetReference(controllerSerialized, "coinsText", coins);
             SetReference(controllerSerialized, "scrollNavigator", scrollNavigator);
@@ -329,6 +326,21 @@ namespace AlchemyTower.Editor
             AssetDatabase.Refresh();
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
             EditorUtility.DisplayDialog("Vertical tower scene created", $"Created {ScenePath} with a fixed HUD and clamped vertical ScrollRect.", "OK");
+        }
+
+        private static void SetFloorPrefabCatalog(SerializedObject controllerSerialized)
+        {
+            SerializedProperty catalog = controllerSerialized.FindProperty("floorPrefabsById");
+            catalog.arraySize = FloorVariantPaths.Length;
+            for (int i = 0; i < FloorVariantPaths.Length; i++)
+            {
+                SerializedProperty entry = catalog.GetArrayElementAtIndex(i);
+                entry.FindPropertyRelative("floorId").stringValue = FloorPrefabIds[i];
+                GameObject variant = AssetDatabase.LoadAssetAtPath<GameObject>(FloorVariantPaths[i]);
+                entry.FindPropertyRelative("prefab").objectReferenceValue = variant != null
+                    ? variant.GetComponent<FloorView>()
+                    : null;
+            }
         }
 
         private static bool BackUpScene()
