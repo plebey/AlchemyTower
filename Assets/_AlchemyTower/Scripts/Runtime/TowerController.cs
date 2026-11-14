@@ -19,10 +19,16 @@ namespace AlchemyTower
 
         private readonly List<FloorView> activeFloorViews = new List<FloorView>();
         private TowerModel model;
+        private SaveService saveService;
         private LockedFloorView lockedFloorView;
         private int previewFloorNumber;
 
         public TowerModel Model => model;
+
+        public void DisableSavingForSession()
+        {
+            saveService?.DisableSavingForSession();
+        }
 
         private void Awake()
         {
@@ -33,6 +39,8 @@ namespace AlchemyTower
             }
 
             model = towerDefinition.CreateModel();
+            saveService = new SaveService(model, new PlayerPrefsSaveStorage());
+            ReportLoadResult(saveService.Load());
             InitializeScrollNavigator();
             RebuildFloorViews();
             RefreshViews();
@@ -41,7 +49,30 @@ namespace AlchemyTower
         private void Update()
         {
             model.Tick(Time.deltaTime);
+            saveService.Tick(Time.deltaTime);
             RefreshViews();
+        }
+
+        private void OnApplicationPause(bool isPaused)
+        {
+            if (isPaused)
+                FlushPendingSave();
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus)
+                FlushPendingSave();
+        }
+
+        private void OnApplicationQuit()
+        {
+            FlushPendingSave();
+        }
+
+        private void OnDestroy()
+        {
+            saveService?.Dispose();
         }
 
         private void TryUnlockPreviewFloor()
@@ -147,6 +178,23 @@ namespace AlchemyTower
         private bool CanProcessFloorInput()
         {
             return scrollNavigator == null || scrollNavigator.CanProcessClick;
+        }
+
+        private void FlushPendingSave()
+        {
+            if (saveService != null && saveService.IsDirty && !saveService.TrySave())
+                Debug.LogWarning($"Alchemy Tower save failed: {saveService.LastError}", this);
+        }
+
+        private void ReportLoadResult(SaveLoadStatus status)
+        {
+            if (status == SaveLoadStatus.NoSave || status == SaveLoadStatus.Loaded)
+                return;
+
+            Debug.LogWarning(
+                $"Alchemy Tower save was not loaded ({status}). A fresh in-memory game will be used "
+                + $"without overwriting the existing save. {saveService.LastError}",
+                this);
         }
     }
 }
