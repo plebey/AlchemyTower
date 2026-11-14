@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: FirstFloor
   m_EditorClassIdentifier: AlchemyTower.Runtime::AlchemyTower.FloorDefinitionSO
   floorId: first_floor
-  displayName: First Floor
+  displayName: "\u041B\u0435\u0442\u043D\u0438\u0439 \u044D\u0442\u0430\u0436"
   brewDurationSeconds: 5
   tapBoostSeconds: 0.35
   baseRewardCoins: 10
