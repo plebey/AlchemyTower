@@ -8,7 +8,7 @@ MonoImporter:
   - floorViewPrefab: {fileID: 4194428734937529969, guid: dc6ca50a5182bea4593bffcf2aba9f5d, type: 3}
   - lockedFloorViewPrefab: {fileID: 6511050301486424782, guid: 5e224f60ad6353643abb943fc00a87c1, type: 3}
   - floorContainer: {instanceID: 0}
-  - coinsText: {instanceID: 0}
+  - topHUD: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

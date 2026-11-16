@@ -24,6 +24,7 @@ namespace AlchemyTower.Editor
             RootFolder + "/Prefabs/UI/Floor03.prefab"
         };
         private const string LockedPrefabPath = RootFolder + "/Prefabs/UI/LockedFloorView.prefab";
+        private const string TopHudPrefabPath = RootFolder + "/Prefabs/UI/TopHUD.prefab";
         private const string PrefabBackupsFolder = RootFolder + "/Prefabs/UI/Backups";
         private const string TowerDefinitionPath = RootFolder + "/Data/TowerDefinition.asset";
         private const string ScenePath = RootFolder + "/Scenes/M1FirstFloor.unity";
@@ -125,9 +126,17 @@ namespace AlchemyTower.Editor
 
             TowerDefinitionSO towerDefinition = AssetDatabase.LoadAssetAtPath<TowerDefinitionSO>(TowerDefinitionPath);
             GameObject floorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(FloorPrefabPath);
-            if (towerDefinition == null || floorPrefab == null || floorPrefab.GetComponent<FloorView>() == null)
+            GameObject topHudPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(TopHudPrefabPath);
+            if (towerDefinition == null
+                || floorPrefab == null
+                || floorPrefab.GetComponent<FloorView>() == null
+                || topHudPrefab == null
+                || topHudPrefab.GetComponent<TopHUD>() == null)
             {
-                EditorUtility.DisplayDialog("Missing tower assets", "TowerDefinition and a valid FloorView Prefab are required.", "OK");
+                EditorUtility.DisplayDialog(
+                    "Missing tower assets",
+                    "TowerDefinition, FloorView Prefab, and TopHUD Prefab are required.",
+                    "OK");
                 return;
             }
 
@@ -145,7 +154,11 @@ namespace AlchemyTower.Editor
                 return;
 
             ConfigurePortraitOrientation();
-            CreateTowerScene(towerDefinition, floorPrefab.GetComponent<FloorView>(), lockedPrefab.GetComponent<LockedFloorView>());
+            CreateTowerScene(
+                towerDefinition,
+                floorPrefab.GetComponent<FloorView>(),
+                lockedPrefab.GetComponent<LockedFloorView>(),
+                topHudPrefab);
         }
 
         private static void ApplyTowerLayout(GameObject root)
@@ -248,10 +261,10 @@ namespace AlchemyTower.Editor
         private static void CreateTowerScene(
             TowerDefinitionSO towerDefinition,
             FloorView floorPrefab,
-            LockedFloorView lockedPrefab)
+            LockedFloorView lockedPrefab,
+            GameObject topHudPrefab)
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             CreateMainCamera();
 
             GameObject canvasObject = new GameObject("Portrait UI Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -269,18 +282,11 @@ namespace AlchemyTower.Editor
             GameObject safeArea = CreateUiObject("Mobile Safe Area", canvasObject.transform, typeof(SafeAreaFitter));
             SetStretch(safeArea.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
 
-            GameObject header = CreateUiObject("Fixed Coin HUD", safeArea.transform);
-            SetAnchors(header.GetComponent<RectTransform>(), 0.04f, 0.87f, 0.96f, 0.99f);
-            Text title = CreateText("Game Title", header.transform, font, 58, TextAnchor.MiddleCenter, Color.white);
-            title.text = "ALCHEMY TOWER";
-            SetAnchors(title.rectTransform, 0f, 0.45f, 1f, 1f);
-            Text coins = CreateText("Coin Counter", header.transform, font, 44, TextAnchor.MiddleCenter, new Color(1f, 0.84f, 0.25f));
-            SetAnchors(coins.rectTransform, 0f, 0f, 1f, 0.48f);
-
             // Mask needs opaque geometry to write its stencil. showMaskGraphic=false keeps
             // the viewport itself invisible without culling the mask mesh.
             Image viewportImage = CreateImage("Tower Viewport", safeArea.transform, Color.white, true);
-            SetAnchors(viewportImage.rectTransform, 0.08f, 0.02f, 0.92f, 0.86f);
+            SetAnchors(viewportImage.rectTransform, 0.08f, 0.02f, 0.92f, 1f);
+            viewportImage.rectTransform.offsetMax = new Vector2(0f, -124f);
             Mask mask = viewportImage.gameObject.AddComponent<Mask>();
             mask.showMaskGraphic = false;
             ScrollRect scrollRect = viewportImage.gameObject.AddComponent<ScrollRect>();
@@ -316,6 +322,13 @@ namespace AlchemyTower.Editor
             scrollRect.scrollSensitivity = 45f;
             scrollRect.verticalNormalizedPosition = 0f;
 
+            GameObject topHudObject = PrefabUtility.InstantiatePrefab(topHudPrefab, scene) as GameObject;
+            if (topHudObject == null)
+                throw new InvalidOperationException("Could not instantiate TopHUD Prefab.");
+            topHudObject.transform.SetParent(safeArea.transform, false);
+            topHudObject.transform.SetAsLastSibling();
+            TopHUD topHUD = topHudObject.GetComponent<TopHUD>();
+
             TowerController controller = safeArea.AddComponent<TowerController>();
             SerializedObject controllerSerialized = new SerializedObject(controller);
             SetReference(controllerSerialized, "towerDefinition", towerDefinition);
@@ -323,7 +336,7 @@ namespace AlchemyTower.Editor
             SetReference(controllerSerialized, "lockedFloorViewPrefab", lockedPrefab);
             SetFloorPrefabCatalog(controllerSerialized);
             SetReference(controllerSerialized, "floorContainer", contentRect);
-            SetReference(controllerSerialized, "coinsText", coins);
+            SetReference(controllerSerialized, "topHUD", topHUD);
             SetReference(controllerSerialized, "scrollNavigator", scrollNavigator);
             controllerSerialized.ApplyModifiedPropertiesWithoutUndo();
 

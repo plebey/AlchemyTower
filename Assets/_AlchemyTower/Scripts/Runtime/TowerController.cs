@@ -25,7 +25,7 @@ namespace AlchemyTower
 
         [Header("Scene References")]
         [SerializeField] private RectTransform floorContainer;
-        [SerializeField] private Text coinsText;
+        [SerializeField] private TopHUD topHUD;
         [SerializeField] private TowerScrollNavigator scrollNavigator;
 
         private readonly List<FloorView> activeFloorViews = new List<FloorView>();
@@ -179,7 +179,7 @@ namespace AlchemyTower
 
         private void RefreshViews()
         {
-            coinsText.text = $"Coins: {model.Coins}";
+            topHUD.SetCoinBalance(model.Coins);
             for (int i = 0; i < activeFloorViews.Count; i++)
                 activeFloorViews[i].Refresh();
 
@@ -193,7 +193,7 @@ namespace AlchemyTower
                 && floorViewPrefab != null
                 && lockedFloorViewPrefab != null
                 && floorContainer != null
-                && coinsText != null;
+                && topHUD != null;
             if (!valid)
                 Debug.LogError("TowerController is missing required references.", this);
             return valid;
