@@ -443,16 +443,19 @@ namespace AlchemyTower
 
     public sealed class TowerSnapshot
     {
-        public TowerSnapshot(int coins, IReadOnlyList<FloorSnapshot> floors, ShopSnapshot shop = default)
+        public TowerSnapshot(int coins, IReadOnlyList<FloorSnapshot> floors, ShopSnapshot shop = default,
+            IReadOnlyList<string> claimedQuestIds = null)
         {
             Coins = coins;
             Floors = floors ?? throw new ArgumentNullException(nameof(floors));
             Shop = shop;
+            ClaimedQuestIds = claimedQuestIds ?? Array.Empty<string>();
         }
 
         public int Coins { get; }
         public IReadOnlyList<FloorSnapshot> Floors { get; }
         public ShopSnapshot Shop { get; }
+        public IReadOnlyList<string> ClaimedQuestIds { get; }
     }
 
     public sealed class TowerModel
@@ -494,10 +497,13 @@ namespace AlchemyTower
 
                 floors[i] = new FloorModel(rules, Wallet, i == 0, RaiseStateChanged, Shop);
             }
+
+            Quests = new QuestBook(this, Wallet, RaiseStateChanged);
         }
 
         public CoinWallet Wallet { get; }
         public ShopModel Shop { get; }
+        public QuestBook Quests { get; }
         public int Coins => Wallet.Coins;
         public IReadOnlyList<FloorModel> Floors => floors;
         public event Action<bool> StateChanged;
@@ -546,13 +552,14 @@ namespace AlchemyTower
             FloorSnapshot[] snapshots = new FloorSnapshot[floors.Length];
             for (int i = 0; i < floors.Length; i++)
                 snapshots[i] = floors[i].CaptureSnapshot();
-            return new TowerSnapshot(Coins, snapshots, Shop.CaptureSnapshot());
+            return new TowerSnapshot(Coins, snapshots, Shop.CaptureSnapshot(), Quests.CaptureClaimedQuestIds());
         }
 
         internal void Restore(TowerSnapshot snapshot)
         {
             Wallet.Restore(snapshot.Coins);
             Shop.Restore(snapshot.Shop);
+            Quests.RestoreClaimedQuestIds(snapshot.ClaimedQuestIds);
             for (int i = 0; i < floors.Length; i++)
             {
                 FloorSnapshot savedFloor = default;

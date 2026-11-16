@@ -56,7 +56,7 @@ namespace AlchemyTower
 
     public sealed class SaveService : IDisposable
     {
-        public const int CurrentSchemaVersion = 2;
+        public const int CurrentSchemaVersion = 3;
         public const float PeriodicSaveIntervalSeconds = 15f;
         public const float ImportantSaveDelaySeconds = 0.5f;
         private const int MaxSupportedLevel = 10000;
@@ -192,9 +192,13 @@ namespace AlchemyTower
             if (data.schemaVersion == 1)
             {
                 data.shop = new ShopSaveData();
-                data.schemaVersion = CurrentSchemaVersion;
-                error = null;
-                return true;
+                data.schemaVersion = 2;
+            }
+
+            if (data.schemaVersion == 2)
+            {
+                data.claimedQuestIds = new List<string>();
+                data.schemaVersion = 3;
             }
 
             if (data.schemaVersion == CurrentSchemaVersion)
@@ -217,7 +221,8 @@ namespace AlchemyTower
                 {
                     alchemicalGlovesLevel = snapshot.Shop.AlchemicalGlovesLevel,
                     goldenSealLevel = snapshot.Shop.GoldenSealLevel
-                }
+                },
+                claimedQuestIds = new List<string>(snapshot.ClaimedQuestIds)
             };
             for (int i = 0; i < snapshot.Floors.Count; i++)
             {
@@ -314,8 +319,21 @@ namespace AlchemyTower
                 return false;
             }
 
+            List<string> claimedQuestIds = data.claimedQuestIds ?? new List<string>();
+            HashSet<string> uniqueClaimedQuestIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < claimedQuestIds.Count; i++)
+            {
+                string questId = claimedQuestIds[i];
+                if (string.IsNullOrWhiteSpace(questId) || questId.Length > 128
+                    || !uniqueClaimedQuestIds.Add(questId))
+                {
+                    error = "Claimed quest identifiers must be non-empty, unique, and at most 128 characters.";
+                    return false;
+                }
+            }
+
             snapshot = new TowerSnapshot(coins, floors,
-                new ShopSnapshot(shop.alchemicalGlovesLevel, shop.goldenSealLevel));
+                new ShopSnapshot(shop.alchemicalGlovesLevel, shop.goldenSealLevel), claimedQuestIds);
             error = null;
             return true;
         }

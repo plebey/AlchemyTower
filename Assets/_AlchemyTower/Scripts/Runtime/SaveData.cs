@@ -11,6 +11,7 @@ namespace AlchemyTower
         public string coinBalance = "0";
         public List<FloorSaveData> floors = new List<FloorSaveData>();
         public ShopSaveData shop = new ShopSaveData();
+        public List<string> claimedQuestIds = new List<string>();
     }
 
     [Serializable]

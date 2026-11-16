@@ -75,6 +75,52 @@ namespace AlchemyTower.Tests
         }
 
         [Test]
+        public void Load_V2SaveWithoutQuestsComputesExistingProgressWithoutClaimingReward()
+        {
+            GameSaveData oldSave = ValidFirstFloorSave();
+            oldSave.schemaVersion = 2;
+            oldSave.floors[0].level = 3;
+            oldSave.claimedQuestIds = null;
+            TowerModel restored = CreateTower();
+            using SaveService saves = new SaveService(
+                restored,
+                new MemorySaveStorage { Data = "present" },
+                new FixedSaveSerializer(oldSave));
+
+            Assert.That(saves.Load(), Is.EqualTo(SaveLoadStatus.Loaded));
+            QuestModel quest = restored.Quests.GetQuest(QuestBook.FirstStepsId);
+            Assert.That(quest.CurrentProgress, Is.EqualTo(3));
+            Assert.That(quest.Status, Is.EqualTo(QuestStatus.RewardAvailable));
+            Assert.That(restored.Coins, Is.Zero);
+        }
+
+        [Test]
+        public void SaveLoad_RestoresClaimedQuestWithoutDuplicateReward()
+        {
+            MemorySaveStorage storage = new MemorySaveStorage();
+            TowerModel source = CreateTower(initialCoins: 1000);
+            Assert.That(source.GetFloor(1).TryUpgrade(), Is.True);
+            Assert.That(source.GetFloor(1).TryUpgrade(), Is.True);
+            QuestModel sourceQuest = source.Quests.GetQuest(QuestBook.FirstStepsId);
+            Assert.That(sourceQuest.TryClaimReward(), Is.True);
+            int savedCoins = source.Coins;
+            using (SaveService saves = new SaveService(source, storage))
+            {
+                source.Tick(0.00001f);
+                Assert.That(saves.TrySave(), Is.True);
+            }
+
+            TowerModel restored = CreateTower();
+            using (SaveService saves = new SaveService(restored, storage))
+                Assert.That(saves.Load(), Is.EqualTo(SaveLoadStatus.Loaded));
+
+            QuestModel restoredQuest = restored.Quests.GetQuest(QuestBook.FirstStepsId);
+            Assert.That(restoredQuest.Status, Is.EqualTo(QuestStatus.RewardClaimed));
+            Assert.That(restoredQuest.TryClaimReward(), Is.False);
+            Assert.That(restored.Coins, Is.EqualTo(savedCoins));
+        }
+
+        [Test]
         public void Load_RestoresSharedCoinBalanceExactlyOnce()
         {
             MemorySaveStorage storage = SaveTower(CreateProgressedTower(initialCoins: 777));
@@ -190,7 +236,7 @@ namespace AlchemyTower.Tests
         {
             MemorySaveStorage storage = new MemorySaveStorage
             {
-                Data = "{\"schemaVersion\":3,\"coinBalance\":\"0\",\"floors\":[]}"
+                Data = "{\"schemaVersion\":4,\"coinBalance\":\"0\",\"floors\":[]}"
             };
             using SaveService saves = new SaveService(CreateTower(), storage);
 
@@ -231,6 +277,25 @@ namespace AlchemyTower.Tests
                 new FixedSaveSerializer(data));
 
             Assert.That(saves.Load(), Is.EqualTo(SaveLoadStatus.Loaded));
+        }
+
+        [Test]
+        public void LoadAndResave_PreservesUnknownClaimedQuestIdentifier()
+        {
+            GameSaveData data = ValidFirstFloorSave();
+            data.claimedQuestIds.Add("quest_added_by_future_content");
+            UnityJsonSaveSerializer serializer = new UnityJsonSaveSerializer();
+            MemorySaveStorage storage = new MemorySaveStorage { Data = serializer.Serialize(data) };
+            TowerModel tower = CreateTower();
+            using (SaveService saves = new SaveService(tower, storage, serializer))
+            {
+                Assert.That(saves.Load(), Is.EqualTo(SaveLoadStatus.Loaded));
+                tower.Tick(0.00001f);
+                Assert.That(saves.TrySave(), Is.True);
+            }
+
+            GameSaveData resaved = serializer.Deserialize(storage.Data);
+            Assert.That(resaved.claimedQuestIds, Does.Contain("quest_added_by_future_content"));
         }
 
         [Test]

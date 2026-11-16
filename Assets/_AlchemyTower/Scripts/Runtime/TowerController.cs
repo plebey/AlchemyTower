@@ -55,6 +55,7 @@ namespace AlchemyTower
             saveService = new SaveService(model, new PlayerPrefsSaveStorage());
             ReportLoadResult(saveService.Load());
             bottomNavigation.ShopView.Bind(model);
+            bottomNavigation.QuestBookView.Bind(model, OnQuestRewardClaimed);
             InitializeScrollNavigator();
             RebuildFloorViews();
             RefreshViews();
@@ -183,6 +184,7 @@ namespace AlchemyTower
         {
             topHUD.SetCoinBalance(model.Coins);
             bottomNavigation.ShopView.Refresh();
+            bottomNavigation.QuestBookView.Refresh();
             for (int i = 0; i < activeFloorViews.Count; i++)
                 activeFloorViews[i].Refresh();
 
@@ -198,7 +200,8 @@ namespace AlchemyTower
                 && floorContainer != null
                 && topHUD != null
                 && bottomNavigation != null
-                && bottomNavigation.ShopView != null;
+                && bottomNavigation.ShopView != null
+                && bottomNavigation.QuestBookView != null;
             if (!valid)
                 Debug.LogError("TowerController is missing required references.", this);
             return valid;
@@ -227,6 +230,13 @@ namespace AlchemyTower
         {
             if (saveService != null && saveService.IsDirty && !saveService.TrySave())
                 Debug.LogWarning($"Alchemy Tower save failed: {saveService.LastError}", this);
+        }
+
+        private void OnQuestRewardClaimed()
+        {
+            RefreshViews();
+            if (saveService != null && saveService.IsDirty && !saveService.TrySave())
+                Debug.LogWarning($"Alchemy Tower quest reward save failed: {saveService.LastError}", this);
         }
 
         private void ReportLoadResult(SaveLoadStatus status)

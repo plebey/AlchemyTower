@@ -53,6 +53,7 @@ namespace AlchemyTower
         [Tooltip("Assigned by the safe-area shell. This is the existing Tower Viewport, not a recreated screen.")]
         [SerializeField] private GameObject towerScreen;
         [SerializeField] private ShopView shopView;
+        [SerializeField] private QuestBookView questBookView;
 
         [Header("Editable Items (hierarchy order follows this list)")]
         [SerializeField] private Item[] items = Array.Empty<Item>();
@@ -83,6 +84,7 @@ namespace AlchemyTower
 
         public RectTransform NavigationBar => navigationBar;
         public ShopView ShopView => shopView;
+        public QuestBookView QuestBookView => questBookView;
         public int SelectedIndex => selectedIndex;
 
         private void Awake()
