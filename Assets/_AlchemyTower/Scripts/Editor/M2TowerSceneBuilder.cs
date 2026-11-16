@@ -25,6 +25,7 @@ namespace AlchemyTower.Editor
         };
         private const string LockedPrefabPath = RootFolder + "/Prefabs/UI/LockedFloorView.prefab";
         private const string TopHudPrefabPath = RootFolder + "/Prefabs/UI/TopHUD.prefab";
+        private const string BottomNavigationPrefabPath = RootFolder + "/Prefabs/UI/BottomNavigation.prefab";
         private const string PrefabBackupsFolder = RootFolder + "/Prefabs/UI/Backups";
         private const string TowerDefinitionPath = RootFolder + "/Data/TowerDefinition.asset";
         private const string ScenePath = RootFolder + "/Scenes/M1FirstFloor.unity";
@@ -127,15 +128,18 @@ namespace AlchemyTower.Editor
             TowerDefinitionSO towerDefinition = AssetDatabase.LoadAssetAtPath<TowerDefinitionSO>(TowerDefinitionPath);
             GameObject floorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(FloorPrefabPath);
             GameObject topHudPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(TopHudPrefabPath);
+            GameObject bottomNavigationPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(BottomNavigationPrefabPath);
             if (towerDefinition == null
                 || floorPrefab == null
                 || floorPrefab.GetComponent<FloorView>() == null
                 || topHudPrefab == null
-                || topHudPrefab.GetComponent<TopHUD>() == null)
+                || topHudPrefab.GetComponent<TopHUD>() == null
+                || bottomNavigationPrefab == null
+                || bottomNavigationPrefab.GetComponent<BottomNavigation>() == null)
             {
                 EditorUtility.DisplayDialog(
                     "Missing tower assets",
-                    "TowerDefinition, FloorView Prefab, and TopHUD Prefab are required.",
+                    "TowerDefinition, FloorView, TopHUD, and BottomNavigation Prefabs are required.",
                     "OK");
                 return;
             }
@@ -158,7 +162,8 @@ namespace AlchemyTower.Editor
                 towerDefinition,
                 floorPrefab.GetComponent<FloorView>(),
                 lockedPrefab.GetComponent<LockedFloorView>(),
-                topHudPrefab);
+                topHudPrefab,
+                bottomNavigationPrefab);
         }
 
         private static void ApplyTowerLayout(GameObject root)
@@ -262,7 +267,8 @@ namespace AlchemyTower.Editor
             TowerDefinitionSO towerDefinition,
             FloorView floorPrefab,
             LockedFloorView lockedPrefab,
-            GameObject topHudPrefab)
+            GameObject topHudPrefab,
+            GameObject bottomNavigationPrefab)
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             CreateMainCamera();
@@ -329,6 +335,20 @@ namespace AlchemyTower.Editor
             topHudObject.transform.SetAsLastSibling();
             TopHUD topHUD = topHudObject.GetComponent<TopHUD>();
 
+            GameObject bottomNavigationObject = PrefabUtility.InstantiatePrefab(bottomNavigationPrefab, scene) as GameObject;
+            if (bottomNavigationObject == null)
+                throw new InvalidOperationException("Could not instantiate BottomNavigation Prefab.");
+            bottomNavigationObject.transform.SetParent(safeArea.transform, false);
+            bottomNavigationObject.transform.SetAsLastSibling();
+            BottomNavigation bottomNavigation = bottomNavigationObject.GetComponent<BottomNavigation>();
+
+            SafeAreaContentLayout contentLayout = safeArea.AddComponent<SafeAreaContentLayout>();
+            SerializedObject contentLayoutSerialized = new SerializedObject(contentLayout);
+            SetReference(contentLayoutSerialized, "topHUD", topHudObject.GetComponent<RectTransform>());
+            SetReference(contentLayoutSerialized, "towerViewport", viewportImage.rectTransform);
+            SetReference(contentLayoutSerialized, "bottomNavigation", bottomNavigation);
+            contentLayoutSerialized.ApplyModifiedPropertiesWithoutUndo();
+
             TowerController controller = safeArea.AddComponent<TowerController>();
             SerializedObject controllerSerialized = new SerializedObject(controller);
             SetReference(controllerSerialized, "towerDefinition", towerDefinition);
@@ -347,7 +367,7 @@ namespace AlchemyTower.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
-            EditorUtility.DisplayDialog("Vertical tower scene created", $"Created {ScenePath} with a fixed HUD and clamped vertical ScrollRect.", "OK");
+            EditorUtility.DisplayDialog("Vertical tower scene created", $"Created {ScenePath} with fixed navigation and a clamped vertical ScrollRect.", "OK");
         }
 
         private static void SetFloorPrefabCatalog(SerializedObject controllerSerialized)

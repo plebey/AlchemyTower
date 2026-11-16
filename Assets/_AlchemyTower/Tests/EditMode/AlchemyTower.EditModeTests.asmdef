@@ -2,7 +2,8 @@
   "name": "AlchemyTower.EditModeTests",
   "rootNamespace": "AlchemyTower.Tests",
   "references": [
-    "AlchemyTower.Runtime"
+    "AlchemyTower.Runtime",
+    "UnityEngine.UI"
   ],
   "includePlatforms": [
     "Editor"
