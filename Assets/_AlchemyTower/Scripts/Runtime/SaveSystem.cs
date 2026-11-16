@@ -56,7 +56,7 @@ namespace AlchemyTower
 
     public sealed class SaveService : IDisposable
     {
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 2;
         public const float PeriodicSaveIntervalSeconds = 15f;
         public const float ImportantSaveDelaySeconds = 0.5f;
         private const int MaxSupportedLevel = 10000;
@@ -189,7 +189,14 @@ namespace AlchemyTower
 
         private static bool TryMigrateToCurrentVersion(GameSaveData data, out string error)
         {
-            // Add explicit older-version cases here when a schema after v1 is introduced.
+            if (data.schemaVersion == 1)
+            {
+                data.shop = new ShopSaveData();
+                data.schemaVersion = CurrentSchemaVersion;
+                error = null;
+                return true;
+            }
+
             if (data.schemaVersion == CurrentSchemaVersion)
             {
                 error = null;
@@ -205,7 +212,12 @@ namespace AlchemyTower
             GameSaveData data = new GameSaveData
             {
                 schemaVersion = CurrentSchemaVersion,
-                coinBalance = snapshot.Coins.ToString(CultureInfo.InvariantCulture)
+                coinBalance = snapshot.Coins.ToString(CultureInfo.InvariantCulture),
+                shop = new ShopSaveData
+                {
+                    alchemicalGlovesLevel = snapshot.Shop.AlchemicalGlovesLevel,
+                    goldenSealLevel = snapshot.Shop.GoldenSealLevel
+                }
             };
             for (int i = 0; i < snapshot.Floors.Count; i++)
             {
@@ -292,7 +304,18 @@ namespace AlchemyTower
                 return false;
             }
 
-            snapshot = new TowerSnapshot(coins, floors);
+            ShopSaveData shop = data.shop ?? new ShopSaveData();
+            if (shop.alchemicalGlovesLevel < 0
+                || shop.alchemicalGlovesLevel > model.Shop.GetMaxLevel(ShopUpgradeId.AlchemicalGloves)
+                || shop.goldenSealLevel < 0
+                || shop.goldenSealLevel > model.Shop.GetMaxLevel(ShopUpgradeId.GoldenSeal))
+            {
+                error = "Shop upgrade levels are outside the configured range.";
+                return false;
+            }
+
+            snapshot = new TowerSnapshot(coins, floors,
+                new ShopSnapshot(shop.alchemicalGlovesLevel, shop.goldenSealLevel));
             error = null;
             return true;
         }

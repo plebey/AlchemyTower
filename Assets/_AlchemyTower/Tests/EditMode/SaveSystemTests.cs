@@ -29,6 +29,52 @@ namespace AlchemyTower.Tests
         }
 
         [Test]
+        public void SaveLoad_RoundTripRestoresShopLevelsWithoutReapplyingEffects()
+        {
+            MemorySaveStorage storage = new MemorySaveStorage();
+            TowerModel source = CreateTower(initialCoins: 20000);
+            using (SaveService saves = new SaveService(source, storage))
+            {
+                Assert.That(source.Shop.TryPurchase(ShopUpgradeId.AlchemicalGloves), Is.True);
+                Assert.That(source.Shop.TryPurchase(ShopUpgradeId.GoldenSeal), Is.True);
+                Assert.That(saves.TrySave(), Is.True);
+            }
+
+            TowerModel restored = CreateTower();
+            using (SaveService saves = new SaveService(restored, storage))
+                Assert.That(saves.Load(), Is.EqualTo(SaveLoadStatus.Loaded));
+
+            Assert.That(restored.Shop.AlchemicalGlovesLevel, Is.EqualTo(1));
+            Assert.That(restored.Shop.GoldenSealLevel, Is.EqualTo(1));
+            Assert.That(restored.GetFloor(1).CurrentTapBoostSeconds, Is.EqualTo(0.4f).Within(0.0001f));
+            Assert.That(restored.GetFloor(1).CurrentRewardCoins, Is.EqualTo(11));
+            Assert.That(restored.Coins, Is.EqualTo(11500));
+            restored.Tick(5f);
+            Assert.That(restored.GetFloor(1).TryCollect(), Is.True);
+            Assert.That(restored.Coins, Is.EqualTo(11511));
+        }
+
+        [Test]
+        public void Load_V1SaveWithoutShopKeepsBothShopLevelsAtZero()
+        {
+            GameSaveData oldSave = ValidFirstFloorSave();
+            oldSave.schemaVersion = 1;
+            oldSave.coinBalance = "321";
+            oldSave.shop = null;
+            TowerModel restored = CreateTower();
+            using SaveService saves = new SaveService(
+                restored,
+                new MemorySaveStorage { Data = "present" },
+                new FixedSaveSerializer(oldSave));
+
+            Assert.That(saves.Load(), Is.EqualTo(SaveLoadStatus.Loaded));
+            Assert.That(restored.Coins, Is.EqualTo(321));
+            Assert.That(restored.GetFloor(1).IsUnlocked, Is.True);
+            Assert.That(restored.Shop.AlchemicalGlovesLevel, Is.Zero);
+            Assert.That(restored.Shop.GoldenSealLevel, Is.Zero);
+        }
+
+        [Test]
         public void Load_RestoresSharedCoinBalanceExactlyOnce()
         {
             MemorySaveStorage storage = SaveTower(CreateProgressedTower(initialCoins: 777));
@@ -144,7 +190,7 @@ namespace AlchemyTower.Tests
         {
             MemorySaveStorage storage = new MemorySaveStorage
             {
-                Data = "{\"schemaVersion\":2,\"coinBalance\":\"0\",\"floors\":[]}"
+                Data = "{\"schemaVersion\":3,\"coinBalance\":\"0\",\"floors\":[]}"
             };
             using SaveService saves = new SaveService(CreateTower(), storage);
 
@@ -215,6 +261,21 @@ namespace AlchemyTower.Tests
             Assert.That(storage.SaveAttempts, Is.EqualTo(1));
             Assert.That(saves.IsDirty, Is.False);
             Assert.That(storage.Data, Is.Not.Empty);
+        }
+
+        [Test]
+        public void ShopPurchase_UsesExistingImportantDirtySavePath()
+        {
+            MemorySaveStorage storage = new MemorySaveStorage();
+            TowerModel tower = CreateTower(initialCoins: 2500);
+            using SaveService saves = new SaveService(tower, storage);
+
+            Assert.That(tower.Shop.TryPurchase(ShopUpgradeId.AlchemicalGloves), Is.True);
+            Assert.That(saves.IsDirty, Is.True);
+            saves.Tick(SaveService.ImportantSaveDelaySeconds);
+
+            Assert.That(storage.SaveAttempts, Is.EqualTo(1));
+            Assert.That(saves.IsDirty, Is.False);
         }
 
         [Test]

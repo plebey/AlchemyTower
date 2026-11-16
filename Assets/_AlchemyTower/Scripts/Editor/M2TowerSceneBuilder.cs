@@ -358,6 +358,7 @@ namespace AlchemyTower.Editor
             SetReference(controllerSerialized, "floorContainer", contentRect);
             SetReference(controllerSerialized, "topHUD", topHUD);
             SetReference(controllerSerialized, "scrollNavigator", scrollNavigator);
+            SetReference(controllerSerialized, "bottomNavigation", bottomNavigation);
             controllerSerialized.ApplyModifiedPropertiesWithoutUndo();
 
             CreateEventSystem();

@@ -439,6 +439,7 @@ MonoBehaviour:
   floorContainer: {fileID: 1247710799}
   topHUD: {fileID: 1900000002}
   scrollNavigator: {fileID: 0}
+  bottomNavigation: {fileID: 1910000002}
 --- !u!114 &131492864
 MonoBehaviour:
   m_ObjectHideFlags: 0

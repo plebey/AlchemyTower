@@ -10,6 +10,7 @@ namespace AlchemyTower
         // A decimal string keeps v1 inspectable while leaving room for a future big-number implementation.
         public string coinBalance = "0";
         public List<FloorSaveData> floors = new List<FloorSaveData>();
+        public ShopSaveData shop = new ShopSaveData();
     }
 
     [Serializable]
@@ -21,5 +22,12 @@ namespace AlchemyTower
         public bool automationPurchased;
         public float brewingProgressSeconds;
         public FloorPhase phase;
+    }
+
+    [Serializable]
+    public sealed class ShopSaveData
+    {
+        public int alchemicalGlovesLevel;
+        public int goldenSealLevel;
     }
 }

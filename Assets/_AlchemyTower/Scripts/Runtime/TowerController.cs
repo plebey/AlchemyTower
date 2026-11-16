@@ -27,6 +27,7 @@ namespace AlchemyTower
         [SerializeField] private RectTransform floorContainer;
         [SerializeField] private TopHUD topHUD;
         [SerializeField] private TowerScrollNavigator scrollNavigator;
+        [SerializeField] private BottomNavigation bottomNavigation;
 
         private readonly List<FloorView> activeFloorViews = new List<FloorView>();
         private readonly List<GameObject> spawnedFloorObjects = new List<GameObject>();
@@ -53,6 +54,7 @@ namespace AlchemyTower
             model = towerDefinition.CreateModel();
             saveService = new SaveService(model, new PlayerPrefsSaveStorage());
             ReportLoadResult(saveService.Load());
+            bottomNavigation.ShopView.Bind(model);
             InitializeScrollNavigator();
             RebuildFloorViews();
             RefreshViews();
@@ -180,6 +182,7 @@ namespace AlchemyTower
         private void RefreshViews()
         {
             topHUD.SetCoinBalance(model.Coins);
+            bottomNavigation.ShopView.Refresh();
             for (int i = 0; i < activeFloorViews.Count; i++)
                 activeFloorViews[i].Refresh();
 
@@ -193,7 +196,9 @@ namespace AlchemyTower
                 && floorViewPrefab != null
                 && lockedFloorViewPrefab != null
                 && floorContainer != null
-                && topHUD != null;
+                && topHUD != null
+                && bottomNavigation != null
+                && bottomNavigation.ShopView != null;
             if (!valid)
                 Debug.LogError("TowerController is missing required references.", this);
             return valid;

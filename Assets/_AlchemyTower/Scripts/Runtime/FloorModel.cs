@@ -121,6 +121,21 @@ namespace AlchemyTower
             return cost >= int.MaxValue ? int.MaxValue : (int)cost;
         }
 
+        public static int ApplyRewardMultiplier(int baseRewardCoins, decimal multiplier)
+        {
+            if (baseRewardCoins <= 0 || multiplier <= 0m)
+                return 0;
+
+            try
+            {
+                return RoundCoins(checked(baseRewardCoins * multiplier));
+            }
+            catch (OverflowException)
+            {
+                return int.MaxValue;
+            }
+        }
+
         // Economy values use nearest-integer rounding; exact .5 ties round away from zero.
         public static int RoundCoins(decimal value)
         {
@@ -173,7 +188,7 @@ namespace AlchemyTower
 
         public int Coins { get; private set; }
 
-        internal bool TrySpend(int amount)
+        internal bool TrySpend(int amount, bool notifyStateChanged = true)
         {
             if (amount < 0)
                 throw new ArgumentOutOfRangeException(nameof(amount));
@@ -181,7 +196,8 @@ namespace AlchemyTower
                 return false;
 
             Coins -= amount;
-            stateChanged?.Invoke(true);
+            if (notifyStateChanged)
+                stateChanged?.Invoke(true);
             return true;
         }
 
@@ -219,17 +235,20 @@ namespace AlchemyTower
     {
         private readonly FloorRules rules;
         private readonly CoinWallet wallet;
+        private readonly ShopModel shop;
         private readonly Action<bool> stateChanged;
 
         public FloorModel(FloorRules rules, int initialCoins = 0)
-            : this(rules, new CoinWallet(initialCoins), true, null)
+            : this(rules, new CoinWallet(initialCoins), true, null, null)
         {
         }
 
-        internal FloorModel(FloorRules rules, CoinWallet wallet, bool isUnlocked, Action<bool> stateChanged)
+        internal FloorModel(FloorRules rules, CoinWallet wallet, bool isUnlocked, Action<bool> stateChanged,
+            ShopModel shop)
         {
             this.rules = rules;
             this.wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
+            this.shop = shop;
             this.stateChanged = stateChanged;
             IsUnlocked = isUnlocked;
             Level = 1;
@@ -246,8 +265,12 @@ namespace AlchemyTower
         public FloorPhase Phase { get; private set; }
         public bool IsAutomated { get; private set; }
         public float BrewDurationSeconds => rules.BrewDurationSeconds;
+        public float BaseTapBoostSeconds => rules.TapBoostSeconds;
         public float Progress01 => IsUnlocked ? ProgressSeconds / rules.BrewDurationSeconds : 0f;
-        public int CurrentRewardCoins => EconomyMath.RewardForLevel(rules, Level);
+        public float CurrentTapBoostSeconds => rules.TapBoostSeconds + (shop?.TapBoostBonusSeconds ?? 0f);
+        public int CurrentRewardCoins => EconomyMath.ApplyRewardMultiplier(
+            EconomyMath.RewardForLevel(rules, Level),
+            shop?.GlobalRewardMultiplier ?? 1m);
         public float NominalIncomePerSecond => rules.BrewDurationSeconds > 0f
             ? CurrentRewardCoins / rules.BrewDurationSeconds
             : 0f;
@@ -281,7 +304,7 @@ namespace AlchemyTower
 
             if (IsAutomated)
             {
-                bool completedCycle = ApplyAutomatedProgress(rules.TapBoostSeconds);
+                bool completedCycle = ApplyAutomatedProgress(CurrentTapBoostSeconds);
                 return completedCycle
                     ? FloorTapResult.AutomatedCycleCompleted
                     : FloorTapResult.Progressed;
@@ -294,7 +317,7 @@ namespace AlchemyTower
                 return FloorTapResult.Collected;
             }
 
-            ApplyProgress(rules.TapBoostSeconds);
+            ApplyProgress(CurrentTapBoostSeconds);
             return Phase == FloorPhase.ReadyToCollect
                 ? FloorTapResult.BecameReady
                 : FloorTapResult.Progressed;
@@ -420,14 +443,16 @@ namespace AlchemyTower
 
     public sealed class TowerSnapshot
     {
-        public TowerSnapshot(int coins, IReadOnlyList<FloorSnapshot> floors)
+        public TowerSnapshot(int coins, IReadOnlyList<FloorSnapshot> floors, ShopSnapshot shop = default)
         {
             Coins = coins;
             Floors = floors ?? throw new ArgumentNullException(nameof(floors));
+            Shop = shop;
         }
 
         public int Coins { get; }
         public IReadOnlyList<FloorSnapshot> Floors { get; }
+        public ShopSnapshot Shop { get; }
     }
 
     public sealed class TowerModel
@@ -435,6 +460,11 @@ namespace AlchemyTower
         private readonly FloorModel[] floors;
 
         public TowerModel(IReadOnlyList<FloorRules> floorRules, int initialCoins = 0)
+            : this(floorRules, ShopRules.Default, initialCoins)
+        {
+        }
+
+        public TowerModel(IReadOnlyList<FloorRules> floorRules, ShopRules shopRules, int initialCoins = 0)
         {
             if (floorRules == null)
                 throw new ArgumentNullException(nameof(floorRules));
@@ -442,6 +472,7 @@ namespace AlchemyTower
                 throw new ArgumentException("At least one floor is required.", nameof(floorRules));
 
             Wallet = new CoinWallet(initialCoins, RaiseStateChanged);
+            Shop = new ShopModel(shopRules, Wallet, RaiseStateChanged);
             floors = new FloorModel[floorRules.Count];
             HashSet<string> floorIds = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < floorRules.Count; i++)
@@ -461,11 +492,12 @@ namespace AlchemyTower
                         nameof(floorRules));
                 }
 
-                floors[i] = new FloorModel(rules, Wallet, i == 0, RaiseStateChanged);
+                floors[i] = new FloorModel(rules, Wallet, i == 0, RaiseStateChanged, Shop);
             }
         }
 
         public CoinWallet Wallet { get; }
+        public ShopModel Shop { get; }
         public int Coins => Wallet.Coins;
         public IReadOnlyList<FloorModel> Floors => floors;
         public event Action<bool> StateChanged;
@@ -514,12 +546,13 @@ namespace AlchemyTower
             FloorSnapshot[] snapshots = new FloorSnapshot[floors.Length];
             for (int i = 0; i < floors.Length; i++)
                 snapshots[i] = floors[i].CaptureSnapshot();
-            return new TowerSnapshot(Coins, snapshots);
+            return new TowerSnapshot(Coins, snapshots, Shop.CaptureSnapshot());
         }
 
         internal void Restore(TowerSnapshot snapshot)
         {
             Wallet.Restore(snapshot.Coins);
+            Shop.Restore(snapshot.Shop);
             for (int i = 0; i < floors.Length; i++)
             {
                 FloorSnapshot savedFloor = default;

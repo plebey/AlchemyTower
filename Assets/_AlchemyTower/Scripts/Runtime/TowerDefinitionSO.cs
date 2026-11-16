@@ -7,6 +7,7 @@ namespace AlchemyTower
     public sealed class TowerDefinitionSO : ScriptableObject
     {
         [SerializeField] private FloorDefinitionSO[] floors = Array.Empty<FloorDefinitionSO>();
+        [SerializeField] private ShopDefinitionSO shopDefinition;
 
         public int FloorCount => floors?.Length ?? 0;
 
@@ -32,7 +33,10 @@ namespace AlchemyTower
                 rules[i] = floors[i].CreateRules();
             }
 
-            return new TowerModel(rules, initialCoins);
+            if (shopDefinition == null)
+                throw new InvalidOperationException("Tower definition is missing its shop definition.");
+
+            return new TowerModel(rules, shopDefinition.CreateRules(), initialCoins);
         }
     }
 }
