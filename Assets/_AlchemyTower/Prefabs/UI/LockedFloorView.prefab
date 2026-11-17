@@ -367,17 +367,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 8533285677343630878}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
+  m_Script: {fileID: 11500000, guid: a91db3257d384c9d9dd261b426c7c98e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.LayoutElement
-  m_IgnoreLayout: 0
-  m_MinWidth: -1
-  m_MinHeight: 820
-  m_PreferredWidth: -1
-  m_PreferredHeight: 820
-  m_FlexibleWidth: -1
-  m_FlexibleHeight: 0
-  m_LayoutPriority: 1
+  m_EditorClassIdentifier: AlchemyTower.Runtime::AlchemyTower.AspectRatioLayoutElement
+  aspectRatio: 2
 --- !u!114 &6511050301486424782
 MonoBehaviour:
   m_ObjectHideFlags: 0

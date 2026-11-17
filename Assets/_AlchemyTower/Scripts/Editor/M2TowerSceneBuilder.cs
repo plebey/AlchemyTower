@@ -31,7 +31,7 @@ namespace AlchemyTower.Editor
         private const string ScenePath = RootFolder + "/Scenes/M1FirstFloor.unity";
         private const string SceneBackupsFolder = RootFolder + "/Scenes/Backups";
         private const string InputActionsPath = "Assets/Settings/InputSystem_Actions.inputactions";
-        private const float FloorHeight = 820f;
+        private const float DefaultFloorAspectRatio = 2f;
 
         [MenuItem("Tools/Alchemy Tower/Build M2 Tower Scene")]
         private static void BuildM2TowerScene()
@@ -172,13 +172,20 @@ namespace AlchemyTower.Editor
             if (legacyLayout != null)
                 UnityEngine.Object.DestroyImmediate(legacyLayout);
 
-            LayoutElement rootSize = root.GetComponent<LayoutElement>();
-            rootSize.minHeight = FloorHeight;
-            rootSize.preferredHeight = FloorHeight;
-            rootSize.flexibleHeight = 0f;
+            LayoutElement legacyRootSize = root.GetComponent<LayoutElement>();
+            if (legacyRootSize != null)
+                UnityEngine.Object.DestroyImmediate(legacyRootSize);
+
+            AspectRatioLayoutElement rootSize = root.GetComponent<AspectRatioLayoutElement>();
+            if (rootSize == null)
+                rootSize = root.AddComponent<AspectRatioLayoutElement>();
+            rootSize.AspectRatio = DefaultFloorAspectRatio;
 
             RectTransform room = RequireRect(root.transform, "Room Panel");
             SetStretch(room, 0f, 0f, 0f, 0f);
+            AspectRatioFitter legacyAspectFitter = room.GetComponent<AspectRatioFitter>();
+            if (legacyAspectFitter != null)
+                UnityEngine.Object.DestroyImmediate(legacyAspectFitter);
             LayoutElement roomSize = room.GetComponent<LayoutElement>();
             if (roomSize != null)
                 UnityEngine.Object.DestroyImmediate(roomSize);
@@ -213,10 +220,10 @@ namespace AlchemyTower.Editor
 
         private static bool IsTowerLayout(GameObject prefab)
         {
-            LayoutElement size = prefab.GetComponent<LayoutElement>();
+            AspectRatioLayoutElement size = prefab.GetComponent<AspectRatioLayoutElement>();
             return prefab.GetComponent<VerticalLayoutGroup>() == null
                 && size != null
-                && Mathf.Abs(size.preferredHeight - FloorHeight) < 1f;
+                && Mathf.Abs(size.AspectRatio - DefaultFloorAspectRatio) < 0.001f;
         }
 
         private static GameObject GetOrCreateLockedFloorPrefab()
@@ -232,13 +239,10 @@ namespace AlchemyTower.Editor
             }
 
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            GameObject root = CreateUiObject("LockedFloorView", null, typeof(CanvasRenderer), typeof(Image), typeof(LayoutElement), typeof(LockedFloorView));
+            GameObject root = CreateUiObject("LockedFloorView", null, typeof(CanvasRenderer), typeof(Image), typeof(AspectRatioLayoutElement), typeof(LockedFloorView));
             Image room = root.GetComponent<Image>();
             room.color = new Color(0.24f, 0.24f, 0.28f, 1f);
-            LayoutElement size = root.GetComponent<LayoutElement>();
-            size.minHeight = FloorHeight;
-            size.preferredHeight = FloorHeight;
-            size.flexibleHeight = 0f;
+            root.GetComponent<AspectRatioLayoutElement>().AspectRatio = DefaultFloorAspectRatio;
 
             Text plus = CreateText("Unlock Plus", root.transform, font, 150, TextAnchor.MiddleCenter, new Color(0.82f, 0.82f, 0.86f));
             plus.text = "+";

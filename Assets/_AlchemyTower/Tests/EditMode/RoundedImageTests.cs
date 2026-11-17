@@ -91,7 +91,10 @@ namespace AlchemyTower.Tests
             VertexHelper vertices = new VertexHelper();
             MethodInfo populate = typeof(RoundedImage).GetMethod(
                 "OnPopulateMesh",
-                BindingFlags.Instance | BindingFlags.NonPublic);
+                BindingFlags.Instance | BindingFlags.NonPublic,
+                binder: null,
+                types: new[] { typeof(VertexHelper) },
+                modifiers: null);
             Assert.That(populate, Is.Not.Null);
             populate.Invoke(image, new object[] { vertices });
             return vertices;

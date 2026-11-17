@@ -158,6 +158,7 @@ namespace AlchemyTower
                     focusedFloor = floorView.transform as RectTransform;
             }
 
+            LayoutRebuilder.MarkLayoutForRebuild(floorContainer);
             return focusedFloor;
         }
 

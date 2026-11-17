@@ -48,7 +48,8 @@ namespace AlchemyTower.Editor
 
     internal static class RoundedImageConverter
     {
-        private const string MenuPath = "Tools/Alchemy Tower/UI/Convert to Rounded Image";
+        private const string ToRoundedMenuPath = "Tools/Alchemy Tower/UI/Convert to Rounded Image";
+        private const string ToImageMenuPath = "Tools/Alchemy Tower/UI/Convert Rounded Image to Image";
 
         private sealed class ReferenceBinding
         {
@@ -82,7 +83,7 @@ namespace AlchemyTower.Editor
                 Maskable = image.maskable;
             }
 
-            public void Apply(RoundedImage image)
+            public void Apply(Image image)
             {
                 image.enabled = Enabled;
                 image.color = Color;
@@ -93,7 +94,7 @@ namespace AlchemyTower.Editor
             }
         }
 
-        [MenuItem(MenuPath, true)]
+        [MenuItem(ToRoundedMenuPath, true)]
         private static bool ValidateSelectedImage()
         {
             return Selection.gameObjects.Length == 1
@@ -102,13 +103,13 @@ namespace AlchemyTower.Editor
                 && image.GetType() == typeof(Image);
         }
 
-        [MenuItem(MenuPath, false, 220)]
+        [MenuItem(ToRoundedMenuPath, false, 220)]
         private static void ConvertSelectedImage()
         {
             Image image = Selection.activeGameObject != null
                 ? Selection.activeGameObject.GetComponent<Image>()
                 : null;
-            ConvertWithDialog(image);
+            ConvertToRoundedWithDialog(image);
         }
 
         [MenuItem("CONTEXT/Image/Convert to Rounded Image", true)]
@@ -120,12 +121,41 @@ namespace AlchemyTower.Editor
         [MenuItem("CONTEXT/Image/Convert to Rounded Image")]
         private static void ConvertContextImage(MenuCommand command)
         {
-            ConvertWithDialog(command.context as Image);
+            ConvertToRoundedWithDialog(command.context as Image);
         }
 
-        private static void ConvertWithDialog(Image image)
+        [MenuItem(ToImageMenuPath, true)]
+        private static bool ValidateSelectedRoundedImage()
         {
-            if (!TryValidate(image, out List<ReferenceBinding> references, out string warning))
+            return Selection.gameObjects.Length == 1
+                && Selection.activeGameObject != null
+                && Selection.activeGameObject.GetComponent<RoundedImage>() != null;
+        }
+
+        [MenuItem(ToImageMenuPath, false, 221)]
+        private static void ConvertSelectedRoundedImage()
+        {
+            RoundedImage image = Selection.activeGameObject != null
+                ? Selection.activeGameObject.GetComponent<RoundedImage>()
+                : null;
+            ConvertToImageWithDialog(image);
+        }
+
+        [MenuItem("CONTEXT/RoundedImage/Convert to Image", true)]
+        private static bool ValidateContextRoundedImage(MenuCommand command)
+        {
+            return command.context is RoundedImage;
+        }
+
+        [MenuItem("CONTEXT/RoundedImage/Convert to Image")]
+        private static void ConvertContextRoundedImage(MenuCommand command)
+        {
+            ConvertToImageWithDialog(command.context as RoundedImage);
+        }
+
+        private static void ConvertToRoundedWithDialog(Image image)
+        {
+            if (!TryValidateStandardImage(image, out List<ReferenceBinding> references, out string warning))
             {
                 EditorUtility.DisplayDialog("Cannot convert Image", warning, "OK");
                 return;
@@ -148,16 +178,7 @@ namespace AlchemyTower.Editor
                 Undo.RecordObject(roundedImage, "Configure Rounded Image");
                 state.Apply(roundedImage);
 
-                foreach (ReferenceBinding binding in references)
-                {
-                    SerializedObject owner = new SerializedObject(binding.Owner);
-                    SerializedProperty property = owner.FindProperty(binding.PropertyPath)
-                        ?? throw new InvalidOperationException(
-                            $"Serialized reference '{binding.PropertyPath}' no longer exists on '{binding.Owner.name}'.");
-                    property.objectReferenceValue = roundedImage;
-                    owner.ApplyModifiedPropertiesWithoutUndo();
-                    EditorUtility.SetDirty(binding.Owner);
-                }
+                ReplaceReferences(references, roundedImage);
 
                 EditorUtility.SetDirty(roundedImage);
                 PrefabUtility.RecordPrefabInstancePropertyModifications(roundedImage);
@@ -174,7 +195,49 @@ namespace AlchemyTower.Editor
             }
         }
 
-        private static bool TryValidate(
+        private static void ConvertToImageWithDialog(RoundedImage roundedImage)
+        {
+            if (!TryValidateRoundedImage(roundedImage, out List<ReferenceBinding> references, out string warning))
+            {
+                EditorUtility.DisplayDialog("Cannot convert RoundedImage", warning, "OK");
+                return;
+            }
+
+            Undo.IncrementCurrentGroup();
+            int undoGroup = Undo.GetCurrentGroup();
+            Undo.SetCurrentGroupName("Convert Rounded Image to Image");
+
+            try
+            {
+                ImageState state = new ImageState(roundedImage);
+                GameObject gameObject = roundedImage.gameObject;
+
+                foreach (ReferenceBinding binding in references)
+                    Undo.RegisterCompleteObjectUndo(binding.Owner, "Update Image reference");
+
+                Undo.DestroyObjectImmediate(roundedImage);
+                Image image = Undo.AddComponent<Image>(gameObject);
+                Undo.RecordObject(image, "Configure Image");
+                state.Apply(image);
+
+                ReplaceReferences(references, image);
+
+                EditorUtility.SetDirty(image);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(image);
+                Selection.activeObject = image;
+                Undo.CollapseUndoOperations(undoGroup);
+            }
+            catch (Exception exception)
+            {
+                Undo.RevertAllDownToGroup(undoGroup);
+                EditorUtility.DisplayDialog(
+                    "RoundedImage conversion cancelled",
+                    $"No changes were kept because the RoundedImage could not be replaced safely.\n\n{exception.Message}",
+                    "OK");
+            }
+        }
+
+        private static bool TryValidateStandardImage(
             Image image,
             out List<ReferenceBinding> references,
             out string warning)
@@ -235,6 +298,90 @@ namespace AlchemyTower.Editor
                 return false;
 
             return TryFindReferences(image, prefabStage, out references, out warning);
+        }
+
+        private static bool TryValidateRoundedImage(
+            RoundedImage image,
+            out List<ReferenceBinding> references,
+            out string warning)
+        {
+            references = null;
+            warning = null;
+
+            if (image == null)
+            {
+                warning = "Select exactly one GameObject with a RoundedImage component.";
+                return false;
+            }
+
+            if (!TryValidateEditableComponent(image, out PrefabStage prefabStage, out warning))
+                return false;
+
+            if (image.onCullStateChanged.GetPersistentEventCount() > 0)
+            {
+                warning = "The RoundedImage has persistent On Cull State Changed listeners. Remove or migrate them before conversion.";
+                return false;
+            }
+
+            if (!HasOnlySupportedPrefabOverrides(image, out warning))
+                return false;
+
+            return TryFindReferences(image, prefabStage, out references, out warning);
+        }
+
+        private static bool TryValidateEditableComponent(
+            Image image,
+            out PrefabStage prefabStage,
+            out string warning)
+        {
+            prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
+            warning = null;
+
+            if (EditorUtility.IsPersistent(image))
+            {
+                warning = "Open the Prefab in Prefab Mode before converting its Image. Direct asset conversion is intentionally disabled.";
+                return false;
+            }
+
+            if (PrefabUtility.IsPartOfImmutablePrefab(image))
+            {
+                warning = "The selected Image belongs to an immutable Prefab and cannot be replaced safely.";
+                return false;
+            }
+
+            if (prefabStage != null && PrefabUtility.IsPartOfPrefabInstance(image))
+            {
+                warning = "The selected Image belongs to a nested Prefab. Open that nested Prefab itself before converting the component.";
+                return false;
+            }
+
+            return true;
+        }
+
+        private static void ReplaceReferences(
+            IEnumerable<ReferenceBinding> references,
+            Image replacement)
+        {
+            foreach (ReferenceBinding binding in references)
+            {
+                SerializedObject owner = new SerializedObject(binding.Owner);
+                SerializedProperty property = owner.FindProperty(binding.PropertyPath)
+                    ?? throw new InvalidOperationException(
+                        $"Serialized reference '{binding.PropertyPath}' no longer exists on '{binding.Owner.name}'.");
+
+                property.objectReferenceValue = replacement;
+                owner.ApplyModifiedPropertiesWithoutUndo();
+                owner.Update();
+
+                SerializedProperty updatedProperty = owner.FindProperty(binding.PropertyPath);
+                if (updatedProperty == null || updatedProperty.objectReferenceValue != replacement)
+                {
+                    throw new InvalidOperationException(
+                        $"Reference '{binding.PropertyPath}' on '{binding.Owner.name}' cannot accept {replacement.GetType().Name}.");
+                }
+
+                EditorUtility.SetDirty(binding.Owner);
+            }
         }
 
         private static bool HasOnlySupportedPrefabOverrides(Image image, out string warning)
