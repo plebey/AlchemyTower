@@ -90,7 +90,7 @@ GameObject:
   m_Component:
   - component: {fileID: 920000000000000002}
   - component: {fileID: 920000000000000003}
-  - component: {fileID: 920000000000000004}
+  - component: {fileID: 1040475609074729572}
   m_Layer: 5
   m_Name: Production Zone
   m_TagString: Untagged
@@ -129,7 +129,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 920000000000000001}
   m_CullTransparentMesh: 1
---- !u!114 &920000000000000004
+--- !u!114 &1040475609074729572
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -138,9 +138,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 920000000000000001}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Script: {fileID: 11500000, guid: 4fa9852145c84bfda6c54de28334d0a1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_EditorClassIdentifier: AlchemyTower.Runtime::AlchemyTower.RoundedImage
   m_Material: {fileID: 0}
   m_Color: {r: 0.08, g: 0.06, b: 0.13, a: 0.9}
   m_RaycastTarget: 0
@@ -159,6 +159,9 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  cornerRadius: 20
+  borderWidth: 0
+  borderColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!1 &930000000000000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -169,7 +172,7 @@ GameObject:
   m_Component:
   - component: {fileID: 930000000000000002}
   - component: {fileID: 930000000000000003}
-  - component: {fileID: 930000000000000004}
+  - component: {fileID: 1354656316664029500}
   m_Layer: 5
   m_Name: Level Badge Panel
   m_TagString: Untagged
@@ -207,7 +210,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 930000000000000001}
   m_CullTransparentMesh: 1
---- !u!114 &930000000000000004
+--- !u!114 &1354656316664029500
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -216,9 +219,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 930000000000000001}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Script: {fileID: 11500000, guid: 4fa9852145c84bfda6c54de28334d0a1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_EditorClassIdentifier: AlchemyTower.Runtime::AlchemyTower.RoundedImage
   m_Material: {fileID: 0}
   m_Color: {r: 0.13, g: 0.08, b: 0.18, a: 0.92}
   m_RaycastTarget: 0
@@ -237,6 +240,9 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  cornerRadius: 20
+  borderWidth: 0
+  borderColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!1 &940000000000000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -247,7 +253,7 @@ GameObject:
   m_Component:
   - component: {fileID: 940000000000000002}
   - component: {fileID: 940000000000000003}
-  - component: {fileID: 940000000000000004}
+  - component: {fileID: 7145616687493105385}
   m_Layer: 5
   m_Name: Income Badge Panel
   m_TagString: Untagged
@@ -273,8 +279,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.03, y: 0.71}
   m_AnchorMax: {x: 0.35, y: 0.8}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0.000015259, y: -0.00012207}
+  m_SizeDelta: {x: 0.000022888, y: -0.00014114}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &940000000000000003
 CanvasRenderer:
@@ -284,7 +290,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 940000000000000001}
   m_CullTransparentMesh: 1
---- !u!114 &940000000000000004
+--- !u!114 &7145616687493105385
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -293,9 +299,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 940000000000000001}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Script: {fileID: 11500000, guid: 4fa9852145c84bfda6c54de28334d0a1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_EditorClassIdentifier: AlchemyTower.Runtime::AlchemyTower.RoundedImage
   m_Material: {fileID: 0}
   m_Color: {r: 0.13, g: 0.08, b: 0.18, a: 0.9}
   m_RaycastTarget: 0
@@ -314,6 +320,9 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  cornerRadius: 20
+  borderWidth: 0
+  borderColor: {r: 0, g: 0, b: 0, a: 0}
 --- !u!1 &950000000000000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -592,7 +601,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.72, g: 0.88, b: 0.82, a: 1}
+  m_Color: {r: 1, g: 0, b: 0, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -641,10 +650,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 6026256371185199490}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.05, y: 0.24}
-  m_AnchorMax: {x: 0.21, y: 0.76}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0.013, y: 0.081492804}
+  m_AnchorMax: {x: 0.395, y: 0.9185072}
+  m_AnchoredPosition: {x: 0.000049591064, y: -0.1284399}
+  m_SizeDelta: {x: -0.00010395, y: -0.2568}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &982000000000000003
 CanvasRenderer:
@@ -745,7 +754,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.2, g: 0.15, b: 0.3, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1030,8 +1039,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.2, y: 0}
   m_AnchorMax: {x: 0.98, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -0.000025749207}
+  m_SizeDelta: {x: 0, y: -0.000032425}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8370315696975499789
 CanvasRenderer:
@@ -1110,8 +1119,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -16, y: -16}
+  m_AnchoredPosition: {x: 2.4731007, y: -0.5888691}
+  m_SizeDelta: {x: -11.054, y: -17.178}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7409009114464218627
 CanvasRenderer:
@@ -1349,8 +1358,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -16, y: -16}
+  m_AnchoredPosition: {x: 2.4732, y: -0.5889}
+  m_SizeDelta: {x: -11.054, y: -17.178}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4523683898750750749
 CanvasRenderer:
@@ -1644,8 +1653,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 3, y: 0}
-  m_SizeDelta: {x: -22, y: -16}
+  m_AnchoredPosition: {x: 2.4731007, y: -0.588871}
+  m_SizeDelta: {x: -11.054, y: -17.178}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8150886873542229519
 CanvasRenderer:
@@ -1668,7 +1677,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.85, g: 0.48, b: 0.12, a: 1}
+  m_Color: {r: 0, g: 0, b: 0, a: 0.90588236}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1840,10 +1849,10 @@ RectTransform:
   - {fileID: 1316754218144335312}
   m_Father: {fileID: 910000000000000002}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.61, y: 0.82}
+  m_AnchorMin: {x: 0.61, y: 0.8366432}
   m_AnchorMax: {x: 0.97, y: 0.96}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -0.5}
+  m_SizeDelta: {x: 0, y: 1}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &4100222981697512541
 MonoBehaviour:
@@ -1979,8 +1988,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.49560508}
   m_AnchorMax: {x: 0.5, y: 0.49560508}
-  m_AnchoredPosition: {x: 0, y: -0.19290161}
-  m_SizeDelta: {x: 100, y: 77.6143}
+  m_AnchoredPosition: {x: 0, y: 8.5721}
+  m_SizeDelta: {x: 100, y: 60.0844}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &545670472669563749
 MonoBehaviour:

@@ -980,7 +980,39 @@ PrefabInstance:
   m_Modification:
     serializedVersion: 3
     m_TransformParent: {fileID: 131492862}
-    m_Modifications: []
+    m_Modifications:
+    - target: {fileID: 5103, guid: 78b21f5707a843b3a51eceec11e5ab40, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -2486184283514940879, guid: 418c81beaab33814987d47f555db8ca9, type: 3}
+    - target: {fileID: 5103, guid: 78b21f5707a843b3a51eceec11e5ab40, type: 3}
+      propertyPath: m_Color.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5103, guid: 78b21f5707a843b3a51eceec11e5ab40, type: 3}
+      propertyPath: m_Color.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5103, guid: 78b21f5707a843b3a51eceec11e5ab40, type: 3}
+      propertyPath: m_Color.r
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6103, guid: 78b21f5707a843b3a51eceec11e5ab40, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 547b41e09f600d040848b77960d1d6dd, type: 3}
+    - target: {fileID: 6103, guid: 78b21f5707a843b3a51eceec11e5ab40, type: 3}
+      propertyPath: m_Color.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6103, guid: 78b21f5707a843b3a51eceec11e5ab40, type: 3}
+      propertyPath: m_Color.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6103, guid: 78b21f5707a843b3a51eceec11e5ab40, type: 3}
+      propertyPath: m_Color.r
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
