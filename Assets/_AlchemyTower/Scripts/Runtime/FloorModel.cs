@@ -405,6 +405,48 @@ namespace AlchemyTower
             return true;
         }
 
+        internal OfflineFloorProgress ApplyOfflineProgress(double seconds)
+        {
+            if (!IsUnlocked || seconds <= 0d || double.IsNaN(seconds) || double.IsInfinity(seconds))
+                return default;
+
+            if (!IsAutomated)
+            {
+                if (Phase == FloorPhase.Brewing)
+                {
+                    ProgressSeconds = (float)Math.Min(rules.BrewDurationSeconds, ProgressSeconds + seconds);
+                    if (ProgressSeconds >= rules.BrewDurationSeconds)
+                        Phase = FloorPhase.ReadyToCollect;
+                    stateChanged?.Invoke(false);
+                }
+
+                return default;
+            }
+
+            double duration = rules.BrewDurationSeconds;
+            double totalProgress = ProgressSeconds + seconds;
+            double cycleCount = Math.Floor(totalProgress / duration);
+            ProgressSeconds = (float)(totalProgress % duration);
+            Phase = FloorPhase.Brewing;
+            stateChanged?.Invoke(false);
+
+            if (cycleCount < 1d)
+                return default;
+
+            long completedCycles = cycleCount >= long.MaxValue ? long.MaxValue : (long)cycleCount;
+            decimal grossReward;
+            try
+            {
+                grossReward = checked(CurrentRewardCoins * (decimal)completedCycles);
+            }
+            catch (OverflowException)
+            {
+                grossReward = decimal.MaxValue;
+            }
+
+            return new OfflineFloorProgress(completedCycles, grossReward);
+        }
+
         internal FloorSnapshot CaptureSnapshot()
         {
             return new FloorSnapshot(FloorId, IsUnlocked, Level, IsAutomated, ProgressSeconds, Phase);

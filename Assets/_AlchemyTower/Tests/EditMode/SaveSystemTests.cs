@@ -236,7 +236,7 @@ namespace AlchemyTower.Tests
         {
             MemorySaveStorage storage = new MemorySaveStorage
             {
-                Data = "{\"schemaVersion\":4,\"coinBalance\":\"0\",\"floors\":[]}"
+                Data = "{\"schemaVersion\":5,\"coinBalance\":\"0\",\"floors\":[]}"
             };
             using SaveService saves = new SaveService(CreateTower(), storage);
 
@@ -358,6 +358,37 @@ namespace AlchemyTower.Tests
             Assert.That(saves.LastError, Is.Not.Empty);
             saves.Tick(0.1f);
             Assert.That(storage.SaveAttempts, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Load_V3SaveWithoutTimestampDoesNotInventAbsencePeriod()
+        {
+            GameSaveData oldSave = ValidFirstFloorSave();
+            oldSave.schemaVersion = 3;
+            oldSave.lastAccountedUtc = null;
+            using SaveService saves = new SaveService(
+                CreateTower(), new MemorySaveStorage { Data = "present" }, new FixedSaveSerializer(oldSave));
+
+            Assert.That(saves.Load(), Is.EqualTo(SaveLoadStatus.Loaded));
+            Assert.That(saves.HasLastAccountedUtc, Is.False);
+        }
+
+        [Test]
+        public void Checkpoint_PersistsUtcAndNeverMovesBackward()
+        {
+            DateTime first = new DateTime(2026, 11, 17, 12, 0, 0, DateTimeKind.Utc);
+            DateTime earlier = first.AddHours(-2);
+            UnityJsonSaveSerializer serializer = new UnityJsonSaveSerializer();
+            MemorySaveStorage storage = new MemorySaveStorage();
+            using SaveService saves = new SaveService(CreateTower(), storage, serializer);
+
+            Assert.That(saves.TrySaveCheckpoint(first), Is.True);
+            Assert.That(saves.TrySaveCheckpoint(earlier), Is.True);
+
+            GameSaveData persisted = serializer.Deserialize(storage.Data);
+            Assert.That(DateTime.Parse(persisted.lastAccountedUtc, null,
+                System.Globalization.DateTimeStyles.RoundtripKind).ToUniversalTime(), Is.EqualTo(first));
+            Assert.That(saves.LastAccountedUtc, Is.EqualTo(first));
         }
 
         private static MemorySaveStorage SaveTower(TowerModel tower)

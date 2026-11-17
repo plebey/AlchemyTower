@@ -12,6 +12,8 @@ namespace AlchemyTower
         public List<FloorSaveData> floors = new List<FloorSaveData>();
         public ShopSaveData shop = new ShopSaveData();
         public List<string> claimedQuestIds = new List<string>();
+        // Round-trip UTC timestamp. Missing/empty means an older save with an unknown absence period.
+        public string lastAccountedUtc;
     }
 
     [Serializable]

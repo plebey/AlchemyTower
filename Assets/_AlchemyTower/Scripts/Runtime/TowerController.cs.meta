@@ -7,6 +7,8 @@ MonoImporter:
   - towerDefinition: {fileID: 11400000, guid: 5c2d8c3050ca49f6bf11793cd8f2c012, type: 2}
   - floorViewPrefab: {fileID: 4194428734937529969, guid: dc6ca50a5182bea4593bffcf2aba9f5d, type: 3}
   - lockedFloorViewPrefab: {fileID: 6511050301486424782, guid: 5e224f60ad6353643abb943fc00a87c1, type: 3}
+  - offlineProgressConfig: {fileID: 11400000, guid: a4f9c2d86e1b4f58a8d4ab1170c92105, type: 2}
+  - offlineRewardPopupPrefab: {fileID: 104, guid: a4f9c2d86e1b4f58a8d4ab1170c92106, type: 3}
   - floorContainer: {instanceID: 0}
   - topHUD: {instanceID: 0}
   executionOrder: 0

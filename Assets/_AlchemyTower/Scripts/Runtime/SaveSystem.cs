@@ -56,7 +56,7 @@ namespace AlchemyTower
 
     public sealed class SaveService : IDisposable
     {
-        public const int CurrentSchemaVersion = 3;
+        public const int CurrentSchemaVersion = 4;
         public const float PeriodicSaveIntervalSeconds = 15f;
         public const float ImportantSaveDelaySeconds = 0.5f;
         private const int MaxSupportedLevel = 10000;
@@ -64,22 +64,27 @@ namespace AlchemyTower
         private readonly TowerModel model;
         private readonly ISaveStorage storage;
         private readonly ISaveSerializer serializer;
+        private readonly Func<DateTime> utcNow;
         private float dirtySeconds;
         private float importantDirtySeconds;
         private bool importantDirty;
         private bool savingEnabled = true;
 
-        public SaveService(TowerModel model, ISaveStorage storage, ISaveSerializer serializer = null)
+        public SaveService(TowerModel model, ISaveStorage storage, ISaveSerializer serializer = null,
+            Func<DateTime> utcNow = null)
         {
             this.model = model ?? throw new ArgumentNullException(nameof(model));
             this.storage = storage ?? throw new ArgumentNullException(nameof(storage));
             this.serializer = serializer ?? new UnityJsonSaveSerializer();
+            this.utcNow = utcNow ?? (() => DateTime.UtcNow);
             model.StateChanged += OnStateChanged;
         }
 
         public bool IsDirty { get; private set; }
         public bool SavingEnabled => savingEnabled;
         public string LastError { get; private set; }
+        public bool HasLastAccountedUtc { get; private set; }
+        public DateTime LastAccountedUtc { get; private set; }
 
         public SaveLoadStatus Load()
         {
@@ -108,7 +113,11 @@ namespace AlchemyTower
                 if (!TryCreateValidatedSnapshot(data, out TowerSnapshot snapshot, out string error))
                     return BlockSaving(SaveLoadStatus.CorruptedOrInvalid, error);
 
+                if (!TryReadUtcTimestamp(data.lastAccountedUtc, out DateTime timestamp, out string timestampError))
+                    return BlockSaving(SaveLoadStatus.CorruptedOrInvalid, timestampError);
                 model.Restore(snapshot);
+                HasLastAccountedUtc = timestamp != default;
+                LastAccountedUtc = timestamp;
                 LastError = null;
                 return SaveLoadStatus.Loaded;
             }
@@ -136,13 +145,28 @@ namespace AlchemyTower
             if (!IsDirty || !savingEnabled)
                 return false;
 
+            return TryWriteSave(GetMonotonicUtc(utcNow()));
+        }
+
+        public bool TrySaveCheckpoint(DateTime timestampUtc)
+        {
+            if (!savingEnabled)
+                return false;
+
+            return TryWriteSave(GetMonotonicUtc(timestampUtc));
+        }
+
+        private bool TryWriteSave(DateTime timestampUtc)
+        {
             try
             {
-                storage.Save(serializer.Serialize(CreateSaveData(model.CaptureSnapshot())));
+                storage.Save(serializer.Serialize(CreateSaveData(model.CaptureSnapshot(), timestampUtc)));
                 IsDirty = false;
                 importantDirty = false;
                 dirtySeconds = 0f;
                 importantDirtySeconds = 0f;
+                HasLastAccountedUtc = true;
+                LastAccountedUtc = timestampUtc;
                 LastError = null;
                 return true;
             }
@@ -201,6 +225,12 @@ namespace AlchemyTower
                 data.schemaVersion = 3;
             }
 
+            if (data.schemaVersion == 3)
+            {
+                data.lastAccountedUtc = null;
+                data.schemaVersion = 4;
+            }
+
             if (data.schemaVersion == CurrentSchemaVersion)
             {
                 error = null;
@@ -211,12 +241,13 @@ namespace AlchemyTower
             return false;
         }
 
-        private static GameSaveData CreateSaveData(TowerSnapshot snapshot)
+        private static GameSaveData CreateSaveData(TowerSnapshot snapshot, DateTime timestampUtc)
         {
             GameSaveData data = new GameSaveData
             {
                 schemaVersion = CurrentSchemaVersion,
                 coinBalance = snapshot.Coins.ToString(CultureInfo.InvariantCulture),
+                lastAccountedUtc = timestampUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
                 shop = new ShopSaveData
                 {
                     alchemicalGlovesLevel = snapshot.Shop.AlchemicalGlovesLevel,
@@ -339,5 +370,32 @@ namespace AlchemyTower
         }
 
         private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+
+        private DateTime GetMonotonicUtc(DateTime candidate)
+        {
+            DateTime normalized = candidate.Kind == DateTimeKind.Utc ? candidate : candidate.ToUniversalTime();
+            return HasLastAccountedUtc && normalized < LastAccountedUtc ? LastAccountedUtc : normalized;
+        }
+
+        private static bool TryReadUtcTimestamp(string value, out DateTime timestamp, out string error)
+        {
+            timestamp = default;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                error = null;
+                return true;
+            }
+
+            if (!DateTime.TryParseExact(value, "O", CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind, out timestamp))
+            {
+                error = "Last-accounted timestamp is not a valid round-trip UTC value.";
+                return false;
+            }
+
+            timestamp = timestamp.ToUniversalTime();
+            error = null;
+            return true;
+        }
     }
 }

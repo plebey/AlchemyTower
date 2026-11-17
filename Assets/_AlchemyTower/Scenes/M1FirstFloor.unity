@@ -429,6 +429,8 @@ MonoBehaviour:
   towerDefinition: {fileID: 11400000, guid: 5c2d8c3050ca49f6bf11793cd8f2c012, type: 2}
   floorViewPrefab: {fileID: 4194428734937529969, guid: dc6ca50a5182bea4593bffcf2aba9f5d, type: 3}
   lockedFloorViewPrefab: {fileID: 6511050301486424782, guid: 5e224f60ad6353643abb943fc00a87c1, type: 3}
+  offlineProgressConfig: {fileID: 11400000, guid: a4f9c2d86e1b4f58a8d4ab1170c92105, type: 2}
+  offlineRewardPopupPrefab: {fileID: 104, guid: a4f9c2d86e1b4f58a8d4ab1170c92106, type: 3}
   floorPrefabsById:
   - floorId: first_floor
     prefab: {fileID: 3534084489606020720, guid: 1c1b0e9e52aa4d18a0b2000000000001, type: 3}
@@ -440,6 +442,7 @@ MonoBehaviour:
   topHUD: {fileID: 1900000002}
   scrollNavigator: {fileID: 0}
   bottomNavigation: {fileID: 1910000002}
+  popupParent: {fileID: 0}
 --- !u!114 &131492864
 MonoBehaviour:
   m_ObjectHideFlags: 0

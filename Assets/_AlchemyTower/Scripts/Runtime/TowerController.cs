@@ -21,6 +21,8 @@ namespace AlchemyTower
         [SerializeField] private TowerDefinitionSO towerDefinition;
         [SerializeField] private FloorView floorViewPrefab;
         [SerializeField] private LockedFloorView lockedFloorViewPrefab;
+        [SerializeField] private OfflineProgressConfig offlineProgressConfig;
+        [SerializeField] private OfflineRewardPopup offlineRewardPopupPrefab;
         [SerializeField] private FloorPrefabEntry[] floorPrefabsById = Array.Empty<FloorPrefabEntry>();
 
         [Header("Scene References")]
@@ -28,6 +30,7 @@ namespace AlchemyTower
         [SerializeField] private TopHUD topHUD;
         [SerializeField] private TowerScrollNavigator scrollNavigator;
         [SerializeField] private BottomNavigation bottomNavigation;
+        [SerializeField] private RectTransform popupParent;
 
         private readonly List<FloorView> activeFloorViews = new List<FloorView>();
         private readonly List<GameObject> spawnedFloorObjects = new List<GameObject>();
@@ -35,6 +38,12 @@ namespace AlchemyTower
         private SaveService saveService;
         private LockedFloorView lockedFloorView;
         private int previewFloorNumber;
+        private OfflineProgressRules offlineProgressRules;
+        private OfflineRewardPopup offlineRewardPopup;
+        private bool applicationPaused;
+        private bool applicationFocused = true;
+        private bool suspensionActive;
+        private DateTime suspensionStartedUtc;
 
         public TowerModel Model => model;
 
@@ -53,16 +62,24 @@ namespace AlchemyTower
 
             model = towerDefinition.CreateModel();
             saveService = new SaveService(model, new PlayerPrefsSaveStorage());
-            ReportLoadResult(saveService.Load());
+            offlineProgressRules = offlineProgressConfig.CreateRules();
+            SaveLoadStatus loadStatus = saveService.Load();
+            ReportLoadResult(loadStatus);
+            OfflineProgressResult offlineResult = ProcessOfflineProgress(loadStatus, DateTime.UtcNow);
             bottomNavigation.ShopView.Bind(model);
             bottomNavigation.QuestBookView.Bind(model, OnQuestRewardClaimed);
             InitializeScrollNavigator();
             RebuildFloorViews();
             RefreshViews();
+            if (offlineResult.ShouldShowPopup(offlineProgressRules))
+                ShowOfflineRewardPopup(offlineResult);
         }
 
         private void Update()
         {
+            if (suspensionActive)
+                return;
+
             model.Tick(Time.deltaTime);
             saveService.Tick(Time.deltaTime);
             RefreshViews();
@@ -70,19 +87,25 @@ namespace AlchemyTower
 
         private void OnApplicationPause(bool isPaused)
         {
+            applicationPaused = isPaused;
             if (isPaused)
-                FlushPendingSave();
+                BeginSuspension();
+            else
+                TryResumeFromSuspension();
         }
 
         private void OnApplicationFocus(bool hasFocus)
         {
+            applicationFocused = hasFocus;
             if (!hasFocus)
-                FlushPendingSave();
+                BeginSuspension();
+            else
+                TryResumeFromSuspension();
         }
 
         private void OnApplicationQuit()
         {
-            FlushPendingSave();
+            SaveCheckpoint();
         }
 
         private void OnDestroy()
@@ -203,6 +226,9 @@ namespace AlchemyTower
                 && bottomNavigation != null
                 && bottomNavigation.ShopView != null
                 && bottomNavigation.QuestBookView != null;
+            valid = valid
+                && offlineProgressConfig != null
+                && offlineRewardPopupPrefab != null;
             if (!valid)
                 Debug.LogError("TowerController is missing required references.", this);
             return valid;
@@ -227,10 +253,80 @@ namespace AlchemyTower
             return scrollNavigator == null || scrollNavigator.CanProcessClick;
         }
 
-        private void FlushPendingSave()
+        private void BeginSuspension()
         {
-            if (saveService != null && saveService.IsDirty && !saveService.TrySave())
+            if (suspensionActive)
+                return;
+
+            suspensionActive = true;
+            suspensionStartedUtc = DateTime.UtcNow;
+            SaveCheckpoint(suspensionStartedUtc);
+        }
+
+        private void TryResumeFromSuspension()
+        {
+            if (!suspensionActive || applicationPaused || !applicationFocused)
+                return;
+
+            OfflineProgressResult result = ProcessOfflineProgress(
+                SaveLoadStatus.Loaded, DateTime.UtcNow, suspensionStartedUtc);
+            suspensionActive = false;
+            RefreshViews();
+            if (result.ShouldShowPopup(offlineProgressRules))
+                ShowOfflineRewardPopup(result);
+        }
+
+        private OfflineProgressResult ProcessOfflineProgress(SaveLoadStatus loadStatus, DateTime nowUtc,
+            DateTime? absenceStartOverrideUtc = null)
+        {
+            if (saveService == null || !saveService.SavingEnabled)
+                return default;
+
+            if (loadStatus != SaveLoadStatus.Loaded || !saveService.HasLastAccountedUtc)
+            {
+                SaveCheckpoint(nowUtc);
+                return default;
+            }
+
+            TowerSnapshot before = model.CaptureSnapshot();
+            DateTime absenceStartUtc = saveService.LastAccountedUtc;
+            if (absenceStartOverrideUtc.HasValue && absenceStartOverrideUtc.Value > absenceStartUtc)
+                absenceStartUtc = absenceStartOverrideUtc.Value;
+            double absenceSeconds = (nowUtc - absenceStartUtc).TotalSeconds;
+            OfflineProgressResult result = OfflineProgressCalculator.Apply(
+                model, offlineProgressRules, absenceSeconds);
+            if (saveService.TrySaveCheckpoint(nowUtc))
+                return result;
+
+            model.Restore(before);
+            Debug.LogWarning($"Alchemy Tower offline progress was rolled back because saving failed: "
+                + saveService.LastError, this);
+            return default;
+        }
+
+        private void SaveCheckpoint()
+        {
+            SaveCheckpoint(DateTime.UtcNow);
+        }
+
+        private void SaveCheckpoint(DateTime timestampUtc)
+        {
+            if (saveService != null && saveService.SavingEnabled
+                && !saveService.TrySaveCheckpoint(timestampUtc))
+            {
                 Debug.LogWarning($"Alchemy Tower save failed: {saveService.LastError}", this);
+            }
+        }
+
+        private void ShowOfflineRewardPopup(OfflineProgressResult result)
+        {
+            if (offlineRewardPopup == null)
+            {
+                Transform parent = popupParent != null ? popupParent : transform;
+                offlineRewardPopup = Instantiate(offlineRewardPopupPrefab, parent);
+            }
+
+            offlineRewardPopup.Show(result, topHUD.FormatCoinAmount);
         }
 
         private void OnQuestRewardClaimed()

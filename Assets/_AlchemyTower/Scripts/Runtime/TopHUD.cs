@@ -52,6 +52,11 @@ namespace AlchemyTower
                 coinBalanceText.text = FormatCompact(coins, compactNumberSuffixes);
         }
 
+        public string FormatCoinAmount(int coins)
+        {
+            return FormatCompact(coins, compactNumberSuffixes);
+        }
+
         public static string FormatCompact(int value, CompactNumberSuffix[] suffixes)
         {
             if (value < 0)
